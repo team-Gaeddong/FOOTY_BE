@@ -5,7 +5,7 @@ description: FOOTY_BE의 이슈 생성, 브랜치 이름, 커밋 메시지, PR, 
 
 # FOOTY 이슈·브랜치·커밋·PR 규칙
 
-출처: Notion `FOOTY > Github Commit 명세` (2026-10-14 확인). 원본과 다르면 원본이 우선이다.
+출처: Notion `FOOTY > Github Commit 명세` (2026-10-14 확인). 원본과 다르면 원본이 우선이다. 이 날짜는 기존 사본의 조사 기록이다. 원본 URL·재검증 상태는 `docs/harness/sources.md`에서 확인한다.
 
 ## 개발 프로세스
 
@@ -13,7 +13,7 @@ description: FOOTY_BE의 이슈 생성, 브랜치 이름, 커밋 메시지, PR, 
 2. 이슈 기반 브랜치 생성
 3. 이슈 범위의 기능 개발 완료
 4. PR 또는 merge commit도 커밋 메시지 규칙을 따른다
-5. 병합 조건: 리뷰어 최소 1명 approve, CI build success, 테스트 작성(선택)
+5. 병합 조건: 리뷰어 최소 1명 approve, CI build success, 기존 테스트 실행. 새 테스트의 필수 여부는 AGENTS.md 및 D-09를 따른다
 6. 병합 후 feature 브랜치 삭제
 7. 이슈 close
 
@@ -59,9 +59,9 @@ CommitType :: (#issue number) Subject
 | `🚀 ::` | 새 버전 릴리즈 |
 | `🔀 ::` | Merge or PR |
 
-- `(#issue number)`: Notion 설명은 "merge commit이나 PR을 날릴 때만 사용"이지만, 같은 문서의 예시에는 일반 커밋에도 붙어 있다(`decisions.md` C-04). 결정 전에는 PR·merge 커밋에만 붙인다.
+- `(#issue number)`: Notion 설명은 "merge commit이나 PR을 날릴 때만 사용"이지만, 같은 문서의 예시에는 일반 커밋에도 붙어 있다(`decisions.md` C-04). 일반 커밋의 필수 여부는 아직 결정되지 않았다. 검사기는 두 형태를 허용하며, 이를 팀 정책 확정으로 해석하지 않는다. PR·merge에는 이슈 번호를 넣는다.
 - Subject: 50자 이내, 명령형, 한국어, "~수정했다" 대신 "~수정", "Add~" 대신 "~추가"
-- Notion 예시에는 `[MainPage]`처럼 대괄호 범위 표기가 있으나 형식 정의에는 없다(C-04). 쓰지 않는 것을 기본으로 한다.
+- Notion 예시에는 `[MainPage]`처럼 대괄호 범위 표기가 있으나 형식 정의에는 없다(C-04). 필수·금지를 임의로 정하지 않는다. 해당 선택이 필요한 작업에서는 이미 승인된 이슈·사용자 지시를 따르거나 관련 선택만 확인한다.
 
 예:
 ```
@@ -96,4 +96,6 @@ close #이슈번호
 ./scripts/harness/check.sh
 ```
 
-브랜치 이름과 `origin/main` 이후 커밋 메시지 형식을 함께 검사한다.
+브랜치 이름과 기준 ref/HEAD의 공통 조상 이후 커밋을 검사한다. 기본 기준은 `origin/main`이며 실제 PR 대상은 `--base`로 지정한다. 이는 D-10의 base 정책을 확정하지 않는다. 기준 ref 누락·얕은 이력은 실패, 빌드 생략·새 커밋 없음은 일부 검사(종료 코드 2)다.
+
+타입·50자 제한·한국어 포함·🔀 타입의 이슈 번호는 자동 검사한다. 명령형, 이슈의 실제 존재, 변경 범위, 사람 승인과 PR 본문은 리뷰에서 확인한다. PR 제목도 위 커밋 형식과 이슈 번호를 따른다.

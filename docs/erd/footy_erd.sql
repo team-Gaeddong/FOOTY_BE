@@ -1,6 +1,7 @@
 -- FOOTY ERD 스냅샷
 -- 원본: ERD Cloud "footy" 다이어그램 (2026-10-14 Import한 DDL)
 -- 원본과 다르면 원본이 우선이다. 차이는 docs/harness/decisions.md C-12 참고.
+-- 원본 URL 및 검증 범위: docs/harness/sources.md (원본 Export 전체 대조 미완료).
 
 CREATE TABLE member (
   member_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '회원 ID',
