@@ -82,9 +82,15 @@
 - 상태: 참고
 - 저장소 커밋 `3da8795 first commit`, `116ed8c init`은 커밋 규칙 형식이 아님. 규칙 도입 전 커밋으로 보고 검사 대상에서 제외(검사기는 지정된 base와 HEAD의 공통 조상 이후 커밋만 검사). `5920d19 feat :: 백엔드 harness 구축`도 형식 위반이었다. 이력을 재작성하거나 해당 커밋만 예외 처리하지 않는다. 현재 main을 base로 한 새 변경 범위부터 검사한다
 
-### C-12 ERD 사본 검증 범위
-- 상태: 참고
-- `docs/erd/footy_erd.sql`은 ERD Cloud에 Import한 DDL이다. 2026-10-14에 테이블 15개와 관계가 그대로인 것은 화면으로 확인했지만, 이후 팀원이 바꾼 컬럼까지 대조하지는 못함. ERD Cloud의 Export → SQL Preview와 한 번 비교해야 함
+### C-12 ERD 원본에 AUTO_INCREMENT·UNIQUE 표현 없음
+- 상태: UNIQUE 확정(2026-10-19, 김태균) / AUTO_INCREMENT 미결정
+- 결정: UNIQUE 제약의 기준은 `docs/erd/constraints.md`에 명시한다. ERD Cloud에는 표기하지 않는다
+- 아래는 보고 당시 기록
+- 출처 A: `docs/erd/footy_erd.sql` — 모든 PK `AUTO_INCREMENT`, UNIQUE 6개(`uk_member_email`, `uk_member_provider`, `uk_game_player_member`, `uk_balance_review`, `uk_mvp_vote`, `uk_poll_answer`)
+- 출처 B: ERD Cloud `footy` Export (2026-10-19 Chrome에서 직접 확인) — 컬럼·NULL·DEFAULT·코멘트는 출처 A와 같음. FK 24개도 같음(앞선 "FK 없음"은 Export 옵션 `ADD FK CONSTRAINT`가 꺼져 있던 탓). `AUTO_INCREMENT`, UNIQUE는 없음. 컬럼 상세 창(Logical/Physical Name, Domain, Type, Allow null, Default, Comment)에 해당 항목이 없어 ERD Cloud에서 입력할 방법을 찾지 못함
+- 영향: 이메일·Google 계정 중복 방지, AGENTS.md 3절의 "밸런스 평가 1건·MVP 투표 1건(UNIQUE 제약)", 엔티티 PK 생성 전략
+- 확인 필요: 사본의 AUTO_INCREMENT·UNIQUE를 팀 규칙으로 인정할지(원본에는 코멘트나 메모로 표기), ERD Cloud 표현 한계로 보고 사본만 기준으로 둘지
+- 결정할 사람/시점: 팀 / 회원 엔티티 작성 전
 
 ### C-13 구현·리뷰 테스트 기준 불일치
 - 상태: 지침 불일치 수정 / 팀 정책 D-09는 미결정
@@ -100,6 +106,21 @@
 - 조치: 임시 기본값을 제거하고 검사기의 허용 범위와 확정된 팀 정책을 구분했다. 관련 선택에만 결정을 요청하며 독립 작업은 계속한다.
 - 결정할 사람/시점: 팀 / 일반 커밋 형식 확정 시
 
+### C-15 Google 단독 로그인과 member 스키마·규칙
+- 상태: 확정(2026-10-19, 김태균) — ERD Cloud·사본·AGENTS.md 반영 완료
+- 채택안: `password` 삭제, `nickname` NULL 허용(온보딩 전 NULL), `provider VARCHAR(20) NOT NULL`, `provider_id VARCHAR(255) NOT NULL`, `is_onboarded TINYINT(1) NOT NULL DEFAULT 0` 추가. 온보딩 미완료 표현은 (나) member 먼저 생성. UNIQUE(`provider`, `provider_id`)는 C-12에 따라 원본 미표기
+- 아래는 보고 당시 기록
+- 출처 A: D-05c 확정(2026-10-19) — Google OAuth로만 로그인, 회원가입은 온보딩
+- 출처 B: ERD `member` — `password VARCHAR(255) NOT NULL`, Google 계정 식별자(`sub`)·가입 경로 컬럼 없음, 온보딩 완료 여부 컬럼 없음
+- 출처 C: AGENTS.md 4절 — "비밀번호는 해시로만 저장한다(`member.password`)"
+- 영향: 회원 엔티티 작성 불가(넣을 비밀번호가 없음). 이메일만으로 Google 계정을 식별하면 이메일 변경 시 다른 회원이 됨
+- 변경안(ERD Cloud 먼저 반영 필요, 채택 아님):
+  - `password` 삭제 또는 NULL 허용
+  - `provider VARCHAR(20) NOT NULL`, `provider_id VARCHAR(255) NOT NULL` + UNIQUE(`provider`, `provider_id`) 추가
+  - 온보딩 미완료 표현: (가) 온보딩 완료 시점에만 `member` 생성, 그 전 Google 정보는 Redis에 임시 저장 → 컬럼 추가 없음 / (나) `member`를 먼저 만들고 `nickname` NULL 허용 또는 상태 컬럼 추가
+- 함께 정리할 것: AGENTS.md 4절 비밀번호 규칙, C-12의 `email` UNIQUE 여부
+- 결정할 사람/시점: 팀 / 회원 엔티티 작성 전
+
 원본 링크·대조 범위는 `sources.md`에서 관리한다. 지침 정리는 팀의 아키텍처·DB·인증 결정을 대신하지 않는다.
 
 ## D. 미결정 사항 (Notion·ERD·코드 어디에도 없음)
@@ -112,7 +133,12 @@
 | D-02 | 기본 패키지명 | 미결정 | 모든 코드 | 현재 `com.example.footy_be` 유지 또는 팀 도메인으로 변경 |
 | D-03 | API 성공 응답 형식 | 미결정 | 모든 API | 공통 래퍼 없이 리소스 그대로 반환 / 공통 래퍼(`data` 등) 중 택1 |
 | D-04 | 에러 응답·예외 처리 | 미결정 | 모든 API | 전역 예외 처리기 + 에러 코드·메시지 필드 고정 |
-| D-05 | 인증 방식 | 미결정 | 로그인 이후 모든 API | ERD에 `password`가 있어 자체 로그인 전제. 세션 / JWT 중 택1, 소셜 로그인 여부 |
+| D-05 | 인증 방식 | 확정(2026-10-19, 김태균) | 로그인 이후 모든 API | **JWT**. 세부 사항은 아래 D-05a~c에서 미결정 |
+| D-05a | JWT 토큰 구성 | 확정(2026-10-19, 김태균) — 만료 시간 값은 미결정 | 로그인, 로그아웃 | **access + refresh 토큰**. 만료 시간 값 미정. 서명 키는 환경변수 |
+| D-05b | refresh 토큰 저장·로그아웃 처리 | 확정(2026-10-19, 김태균) — 블랙리스트 여부 미결정 | 로그아웃 | **Redis 도입**(의존성·접속 설정 추가). 로그아웃 시 access 토큰 블랙리스트 여부 미정 |
+| D-05c | 로그인 수단 | 확정(2026-10-19, 김태균) | 로그인, 회원가입 | **Google OAuth로만 로그인**. 자체 이메일·비밀번호 로그인 없음. 회원가입은 첫 Google 로그인 뒤 온보딩으로 진행. ERD와 충돌 → C-15 |
+| D-05d | Google OAuth 연동 흐름 | 미결정 | 로그인 | 서버 리다이렉트(Spring `oauth2-client`, 콜백 후 JWT 발급) / 클라이언트가 Google ID 토큰을 받아 서버가 검증 후 JWT 발급. 프론트 형태(웹·앱)에 따라 결정 |
+| D-05e | 온보딩 입력 항목·미완료 회원 처리 | 미결정 | 회원가입(온보딩) | 입력: 닉네임 / 닉네임 + 선호 포지션(`member_position`, 프로필 담당과 범위 조율). 미완료 상태 표현은 C-15 결정에 따름 |
 | D-06 | DB·영속성 | 미결정 | 엔티티 작성 | MySQL + Spring Data JPA, 스키마 관리 방식(ddl-auto 금지 여부, 마이그레이션 도구) |
 | D-07 | URL·HTTP 규칙 | 미결정 | 모든 API | `/api/v1` 접두사, 복수형 명사, 경기 하위 리소스 중첩(`/games/{id}/players`) |
 | D-08 | 코드 스타일·DTO 규칙 | 미결정 | 모든 코드 | 요청·응답 DTO는 `record`, 이름은 `XxxRequest`/`XxxResponse`, 포매터 지정 |

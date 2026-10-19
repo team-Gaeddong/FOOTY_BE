@@ -35,7 +35,7 @@ Notion 기능 설명은 대부분 한 줄이다. 설명에 없는 규칙(예: 18
 
 ## 2. 스키마 대조
 
-- 필요한 테이블·컬럼을 `docs/erd/footy_erd.sql`에서 찾는다.
+- 필요한 테이블·컬럼을 `docs/erd/footy_erd.sql`에서, UNIQUE 제약을 `docs/erd/constraints.md`에서 찾는다.
 - 기능에 필요한 데이터가 ERD에 없으면(예: 경기 결과 점수) 구현을 멈추고 `decisions.md` 형식으로 보고한다. 엔티티에 임의 컬럼을 추가하지 않는다.
 - 엔티티 필드명·NULL 여부·UNIQUE 제약은 DDL과 같아야 한다.
 

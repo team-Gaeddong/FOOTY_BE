@@ -16,6 +16,7 @@ FOOTY는 축구 경기를 만들고, 참가 선수의 포지션·실력을 바�
 |---|---|---|
 | 기능 목록·담당자·스프린트 | Notion `FOOTY > 기능`, `FOOTY > 스프린트 일정` | `.claude/skills/footy-api-implement/references/feature-map.md` |
 | DB 스키마 | ERD Cloud `footy` 다이어그램 | `docs/erd/footy_erd.sql` |
+| UNIQUE 제약 | `docs/erd/constraints.md` (ERD Cloud에 표기 불가) | — |
 | 이슈·브랜치·커밋·PR·버전 | Notion `FOOTY > Github Commit 명세` | `.claude/skills/footy-git-workflow/SKILL.md` |
 | 빌드·런타임 | 이 저장소의 `build.gradle`, `src/` | — |
 | 미결정 사항·문서 충돌 | 팀 결정 대기 | `docs/harness/decisions.md` |
@@ -39,8 +40,9 @@ FOOTY는 축구 경기를 만들고, 참가 선수의 포지션·실력을 바�
 ## 3. 도메인과 스키마 규칙
 
 - 테이블 15개: `member`, `member_position`, `game`, `game_player`, `player_position`, `lineup`, `team`, `team_member`, `balance_review`, `mvp_vote`, `notice`, `poll`, `poll_option`, `poll_answer`, `report`
-- 엔티티·컬럼·제약은 `docs/erd/footy_erd.sql`과 일치해야 한다. 스키마 변경이 필요하면 코드를 먼저 바꾸지 말고 변경안을 보고한다(ERD Cloud가 먼저 바뀌어야 한다).
+- 엔티티·컬럼·제약은 `docs/erd/footy_erd.sql`과, UNIQUE 제약은 `docs/erd/constraints.md`와 일치해야 한다. 스키마 변경이 필요하면 코드를 먼저 바꾸지 말고 변경안을 보고한다(ERD Cloud가 먼저 바뀌어야 한다. UNIQUE는 `constraints.md`가 먼저).
 - ERD에 이미 반영된 도메인 규칙
+  - 로그인은 Google OAuth만 쓴다. 회원은 `member.provider`+`provider_id`로 식별하고, 첫 로그인 때 생성한 뒤 온보딩을 마치면 `is_onboarded=1`이 된다(온보딩 전 `nickname`은 NULL).
   - 경기 생성자(`game.host_id`)가 파티장이다.
   - 비회원 선수 허용: `game_player.member_id`는 NULL 가능.
   - 포지션 값은 `GK`, `DF`, `MF`, `FW`이며 복수 선택과 우선순위(`priority`)를 가진다.
@@ -55,7 +57,7 @@ FOOTY는 축구 경기를 만들고, 참가 선수의 포지션·실력을 바�
 - 커밋 메시지: `{CommitType} :: {Subject}` (형식 세부와 미결정 부분은 git-workflow 스킬 참고)
 - Subject는 한국어, 명령형, 50자 이내, "어떻게"보다 "무엇을/왜"
 - `main`에 직접 커밋·푸시하지 않는다. 병합은 PR로만 하고, 사람 리뷰어 최소 1명의 승인이 필요하다. 에이전트 리뷰는 승인으로 치지 않는다.
-- 비밀번호·토큰·DB 접속 정보를 코드나 커밋에 넣지 않는다. 비밀번호는 해시로만 저장한다(`member.password`).
+- 토큰·JWT 서명 키·OAuth 클라이언트 시크릿·DB·Redis 접속 정보를 코드나 커밋에 넣지 않는다. 자체 비밀번호는 저장하지 않는다(Google OAuth 단독 로그인, `decisions.md` D-05c·C-15).
 - 파티장 전용 동작(공지 작성, 팀 확정, 경기 삭제 등)은 서버에서 권한을 확인한다. 권한 정책이 기능 문서에 없으면 질문한다.
 - 요구사항을 정리할 때는 입력, 출력, 예외 상황, 레퍼런스를 함께 적는다(1차 스크럼 회고록의 프롬프트 설계 규칙).
 

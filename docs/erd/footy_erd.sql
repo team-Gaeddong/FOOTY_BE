@@ -1,19 +1,24 @@
 -- FOOTY ERD 스냅샷
--- 원본: ERD Cloud "footy" 다이어그램 (2026-10-14 Import한 DDL)
--- 원본과 다르면 원본이 우선이다. 차이는 docs/harness/decisions.md C-12 참고.
+-- 원본: ERD Cloud "footy" 다이어그램 (2026-10-14 Import한 DDL, 2026-10-19 member 변경 반영)
+-- 원본과 다르면 원본이 우선이다. 차이는 docs/harness/decisions.md C-12, C-15 참고.
+-- 컬럼·NULL·DEFAULT·FK는 원본 Export와 일치.
+-- UNIQUE의 기준은 docs/erd/constraints.md (원본 ERD Cloud에 표기 불가). AUTO_INCREMENT는 C-12 미결정.
 -- 원본 URL 및 검증 범위: docs/harness/sources.md (원본 Export 전체 대조 미완료).
 
 CREATE TABLE member (
   member_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '회원 ID',
   email VARCHAR(100) NOT NULL COMMENT '이메일',
-  password VARCHAR(255) NOT NULL COMMENT '비밀번호(암호화)',
-  nickname VARCHAR(30) NOT NULL COMMENT '닉네임',
+  nickname VARCHAR(30) NULL COMMENT '닉네임(온보딩 전 NULL)',
   rating DECIMAL(5,2) NOT NULL DEFAULT 0 COMMENT '누적 실력 점수',
   is_deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT '탈퇴 여부',
   created_at DATETIME NOT NULL COMMENT '가입일',
   deleted_at DATETIME NULL COMMENT '탈퇴일',
+  provider VARCHAR(20) NOT NULL COMMENT '로그인 제공자(GOOGLE)',
+  provider_id VARCHAR(255) NOT NULL COMMENT '제공자 회원 식별자(sub)',
+  is_onboarded TINYINT(1) NOT NULL DEFAULT 0 COMMENT '온보딩 완료 여부',
   PRIMARY KEY (member_id),
-  UNIQUE KEY uk_member_email (email)
+  UNIQUE KEY uk_member_email (email),
+  UNIQUE KEY uk_member_provider (provider, provider_id)
 ) COMMENT '회원';
 
 CREATE TABLE member_position (

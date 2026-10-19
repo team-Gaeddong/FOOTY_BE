@@ -7,7 +7,7 @@
 | Notion FOOTY > 기능·스프린트 일정 | 미확인 | `.claude/skills/footy-api-implement/references/feature-map.md` | 2026-10-14 작성된 사본만 확인 |
 | Notion FOOTY > Github Commit 명세 | 미확인 | `.claude/skills/footy-git-workflow/SKILL.md` | 원본 문구 충돌 C-04 미결정 |
 | Notion FOOTY > 1차 스크럼 회고록 | 미확인 | AGENTS.md의 요구사항 정리 규칙 | 원본 미대조 |
-| ERD Cloud footy | 미확인 | `docs/erd/footy_erd.sql` | 테이블·컬럼을 원본 Export와 대조해야 함(C-12) |
+| ERD Cloud footy | https://www.erdcloud.com/d/e7RdzNfbJHXhjyKiu | `docs/erd/footy_erd.sql` | 2026-10-19 Chrome에서 Export(PK·FK 옵션 켬)와 대조: 컬럼·NULL·DEFAULT·FK 24개 일치, AUTO_INCREMENT·UNIQUE는 원본에 없음(C-12). member 변경(C-15) 원본·사본 반영. WebFetch로는 JS 렌더링이라 조회 불가 |
 | GitHub FOOTY_BE | https://github.com/team-Gaeddong/FOOTY_BE | 로컬 Git 저장소 | 2026-10-14 API 조회: public, 기본 main, 보호 없음, 기존 workflow 0개 |
 
 ## 원본을 확인할 때
