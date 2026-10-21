@@ -4,8 +4,9 @@ import com.gaeddong.footy.domain.game.domain.GameStatus;
 import com.gaeddong.footy.domain.game.facade.GameFacade;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameResponse;
 import com.gaeddong.footy.global.auth.CurrentMemberIdProvider;
-import com.gaeddong.footy.global.exception.GlobalExceptionHandler;
-import com.gaeddong.footy.global.exception.UnauthenticatedException;
+import com.gaeddong.footy.global.error.FootyException;
+import com.gaeddong.footy.global.error.GlobalErrorCode;
+import com.gaeddong.footy.global.error.GlobalExceptionHandler;
 import org.springframework.http.MediaType;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
@@ -53,13 +54,13 @@ class GameControllerTest {
 
     @Test
     void 미인증_요청은_401을_반환한다() throws Exception {
-        given(currentMemberIdProvider.currentMemberId()).willThrow(new UnauthenticatedException());
+        given(currentMemberIdProvider.currentMemberId()).willThrow(new FootyException(GlobalErrorCode.UNAUTHORIZED));
 
         mockMvc.perform(post("/games")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(validRequest()))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+                .andExpect(jsonPath("$.code").value("GLOBAL_401_1"))
                 .andExpect(jsonPath("$.message").value("인증이 필요합니다."));
     }
 
@@ -69,7 +70,7 @@ class GameControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"location\":\"대구 풋살장\",\"maxPlayers\":12}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+                .andExpect(jsonPath("$.code").value("GLOBAL_400_1"));
     }
 
     @Test
@@ -93,7 +94,7 @@ class GameControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"일요일 풋살\",\"playDate\":\"2026-11-01T10:00:00\",\"location\":\"대구 풋살장\",\"maxPlayers\":0}"))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+                .andExpect(jsonPath("$.code").value("GLOBAL_400_1"));
     }
 
     private String validRequest() {
