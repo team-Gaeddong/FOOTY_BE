@@ -1,10 +1,12 @@
 package com.gaeddong.footy.global.security;
 
 import com.gaeddong.footy.domain.auth.domain.repository.AccessTokenBlacklistRepository;
+import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.global.error.ErrorResponseWriter;
 import com.gaeddong.footy.global.security.jwt.JwtAuthenticationFilter;
 import com.gaeddong.footy.global.security.jwt.JwtProperties;
 import com.gaeddong.footy.global.security.jwt.JwtProvider;
+import com.gaeddong.footy.global.security.onboarding.OnboardingFilter;
 import com.gaeddong.footy.global.security.oauth.OAuth2LoginFailureHandler;
 import com.gaeddong.footy.global.security.oauth.OAuth2LoginSuccessHandler;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class SecurityConfig {
 
     private final JwtProvider jwtProvider;
     private final AccessTokenBlacklistRepository accessTokenBlacklistRepository;
+    private final MemberRepository memberRepository;
     private final ErrorResponseWriter errorResponseWriter;
     private final JsonAuthenticationEntryPoint authenticationEntryPoint;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
@@ -49,7 +52,8 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationEntryPoint))
                 .addFilterBefore(
                         new JwtAuthenticationFilter(jwtProvider, accessTokenBlacklistRepository, errorResponseWriter),
-                        UsernamePasswordAuthenticationFilter.class);
+                        UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(new OnboardingFilter(memberRepository, errorResponseWriter), JwtAuthenticationFilter.class);
         return http.build();
     }
 }
