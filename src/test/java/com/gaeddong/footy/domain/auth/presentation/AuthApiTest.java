@@ -6,6 +6,7 @@ import com.gaeddong.footy.domain.auth.domain.repository.RefreshTokenRepository;
 import com.gaeddong.footy.domain.member.domain.Member;
 import com.gaeddong.footy.domain.member.domain.Provider;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
+import com.gaeddong.footy.global.security.jwt.JwtProperties;
 import com.gaeddong.footy.global.security.jwt.JwtProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +17,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.hamcrest.Matchers.startsWith;
@@ -43,6 +48,9 @@ class AuthApiTest {
 
     @Autowired
     private JwtProvider jwtProvider;
+
+    @Autowired
+    private JwtProperties jwtProperties;
 
     @Autowired
     private MemberRepository memberRepository;
@@ -124,5 +132,36 @@ class AuthApiTest {
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location",
                         startsWith("https://accounts.google.com/o/oauth2/v2/auth")));
+    }
+
+    @Test
+    void 만료된_access가_헤더에_있어도_재발급_API는_막지_않는다() throws Exception {
+        String expiredAccessToken = new JwtProvider(jwtProperties,
+                Clock.fixed(Instant.now().minus(Duration.ofHours(1)), ZoneOffset.UTC))
+                .createAccessToken(1L);
+
+        // 필터가 막았다면 AUTH_401_3(만료)이 나온다. 서비스까지 가서 refresh 검증에 실패해야 한다.
+        mockMvc.perform(post("/auth/reissue")
+                        .header("Authorization", "Bearer " + expiredAccessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"not-a-jwt\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401_2"));
+    }
+
+    @Test
+    void 없는_경로는_404() throws Exception {
+        mockMvc.perform(get("/no-such-path")
+                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(1L)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GLOBAL_404_1"));
+    }
+
+    @Test
+    void 지원하지_않는_메서드는_405() throws Exception {
+        mockMvc.perform(get("/auth/logout")
+                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(1L)))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.code").value("GLOBAL_405_1"));
     }
 }
