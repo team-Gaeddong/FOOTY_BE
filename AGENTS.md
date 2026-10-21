@@ -30,9 +30,9 @@ FOOTY는 축구 경기를 만들고, 참가 선수의 포지션·실력을 바�
 ## 2. 현재 확정된 기술 사실 (코드 기준)
 
 - Java 21 (Gradle toolchain), Spring Boot 4.1.1, Gradle 9.7.1 wrapper
-- 기본 패키지: `com.example.footy_be` (변경 여부는 `decisions.md` D-02)
-- 선언된 의존성은 `spring-boot-starter`, `spring-boot-starter-test`, 테스트 런타임 `junit-platform-launcher`다. Web, JPA, Validation, Security, DB 드라이버는 아직 없다.
-- 설정 파일: `src/main/resources/application.properties` (`spring.application.name`만 있음)
+- 기본 패키지: `com.gaeddong.footy` (D-02). 도메인별로 `domain.{도메인}.{domain,domain.repository,exception,facade,presentation,service}`, 공통 코드는 `global` (D-01, 해석은 C-16)
+- 선언된 의존성: `spring-boot-starter`, `spring-boot-starter-data-jpa`, 런타임 `postgresql`, 테스트 `spring-boot-starter-test`, `spring-boot-starter-data-jpa-test`, `h2`, `junit-platform-launcher`. Web, Validation, Security, OAuth2, JWT, Redis는 아직 없다.
+- 설정 파일: `src/main/resources/application.properties` (PostgreSQL 접속 정보는 환경변수 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `ddl-auto=none`), 테스트는 `src/test/resources/application.properties` (H2 PostgreSQL 모드, `create-drop`)
 - 원격 저장소: `team-Gaeddong/FOOTY_BE` (2026-10-14 조회: public), 기본 브랜치 `main`
 
 의존성 추가·DB 선택·패키지 구조는 팀 결정 사항이다. 결정 전에는 추가하지 않는다.
@@ -69,7 +69,7 @@ FOOTY는 축구 경기를 만들고, 참가 선수의 포지션·실력을 바�
 python3 -m unittest discover -s scripts/harness/tests -v  # 하네스 변경 시 회귀 검사
 ```
 
-- 2026-10-14 기준 `./gradlew test`는 통과한다(`FootyBeApplicationTests.contextLoads` 1개).
+- 2026-10-21 기준 `./gradlew test`는 통과한다(7개: `FootyBeApplicationTests`, `MemberTest`, `MemberRepositoryTest`).
 - `.github/workflows/harness.yml`은 PR 변경 검사와 기본 브랜치 빌드를 수행한다. 원격에 반영된 뒤에만 CI가 실행되며, 브랜치 보호의 필수 검사 `harness`와 사람 승인 1명 설정은 별도로 적용해야 한다(`README.md`).
 - 종료 코드 0은 명시한 모드의 통과, 1은 실패, 2는 일부 검사다. `--skip-build` 또는 변경 커밋 0개는 완료 증거가 아니다. 기준 ref 누락·얕은 이력은 실패다.
 - 기존 테스트 실행은 필수다. 새 정상·예외 테스트는 권장하며, 팀 전체 필수화는 D-09 확정 후 적용한다. 사용자·이슈가 요구한 테스트는 필수로 수행한다. 누락한 검증 범위는 보고한다.

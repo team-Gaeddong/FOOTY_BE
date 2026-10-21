@@ -1,4 +1,4 @@
-package com.example.footy_be;
+package com.gaeddong.footy;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
