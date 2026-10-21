@@ -95,4 +95,15 @@ public class Member {
         this.deleted = true;
         this.deletedAt = now;
     }
+
+    /**
+     * 탈퇴한 회원이 같은 Google 계정으로 다시 로그인하면 계정을 복구한다(D-05d).
+     */
+    public void restore() {
+        if (!deleted) {
+            throw new IllegalStateException("탈퇴하지 않은 회원입니다.");
+        }
+        this.deleted = false;
+        this.deletedAt = null;
+    }
 }

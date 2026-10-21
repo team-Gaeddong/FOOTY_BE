@@ -60,4 +60,17 @@ class MemberTest {
         assertThatThrownBy(() -> member.withdraw(NOW.plusDays(2)))
                 .isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    void 탈퇴한_회원을_복구한다() {
+        Member member = newMember();
+        member.withdraw(NOW);
+
+        member.restore();
+
+        assertThat(member.isDeleted()).isFalse();
+        assertThat(member.getDeletedAt()).isNull();
+        assertThatThrownBy(member::restore)
+                .isInstanceOf(IllegalStateException.class);
+    }
 }
