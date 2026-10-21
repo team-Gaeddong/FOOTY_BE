@@ -10,7 +10,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,8 +25,11 @@ import static org.mockito.Mockito.verify;
 
 class MemberServiceTest {
 
+    private static final LocalDateTime NOW = LocalDateTime.of(2026, 10, 21, 12, 0);
+
     private final MemberRepository memberRepository = mock(MemberRepository.class);
-    private final MemberService memberService = new MemberService(memberRepository);
+    private final MemberService memberService = new MemberService(memberRepository,
+            Clock.fixed(NOW.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()));
 
     private static Member newMember() {
         return Member.builder()
@@ -78,7 +83,7 @@ class MemberServiceTest {
     @Test
     void 탈퇴한_회원이면_404() {
         Member member = newMember();
-        member.withdraw(LocalDateTime.of(2026, 10, 21, 12, 0));
+        member.withdraw(NOW);
         given(memberRepository.findById(1L)).willReturn(Optional.of(member));
 
         assertThatThrownBy(() -> memberService.completeOnboarding(1L, "태균"))
@@ -96,5 +101,37 @@ class MemberServiceTest {
                 .isInstanceOf(FootyException.class)
                 .extracting("errorCode").isEqualTo(MemberErrorCode.ALREADY_ONBOARDED);
         assertThat(member.getNickname()).isEqualTo("태균");
+    }
+
+    @Test
+    void 탈퇴하면_소프트_삭제된다() {
+        Member member = newMember();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+
+        memberService.withdraw(1L);
+
+        assertThat(member.isDeleted()).isTrue();
+        assertThat(member.getDeletedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    void 이미_탈퇴한_회원이_탈퇴하면_404() {
+        Member member = newMember();
+        member.withdraw(NOW.minusDays(1));
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+
+        assertThatThrownBy(() -> memberService.withdraw(1L))
+                .isInstanceOf(FootyException.class)
+                .extracting("errorCode").isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND);
+        assertThat(member.getDeletedAt()).isEqualTo(NOW.minusDays(1));
+    }
+
+    @Test
+    void 없는_회원이_탈퇴하면_404() {
+        given(memberRepository.findById(1L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> memberService.withdraw(1L))
+                .isInstanceOf(FootyException.class)
+                .extracting("errorCode").isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND);
     }
 }
