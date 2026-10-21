@@ -9,6 +9,7 @@ import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
 import com.gaeddong.footy.domain.member.presentation.dto.MyProfileResponse;
 import com.gaeddong.footy.domain.member.presentation.dto.MyProfileResponse.PositionResponse;
+import com.gaeddong.footy.global.config.ClockConfig;
 import com.gaeddong.footy.global.config.JpaAuditingConfig;
 import com.gaeddong.footy.global.error.FootyException;
 import org.junit.jupiter.api.Test;
@@ -22,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
-@Import({JpaAuditingConfig.class, MemberService.class})
+@Import({JpaAuditingConfig.class, ClockConfig.class, MemberService.class})
 class MemberProfileServiceTest {
 
     @Autowired
