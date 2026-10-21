@@ -14,18 +14,22 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 보안 필터·예외 처리기·컨트롤러를 함께 확인한다. Redis 저장소는 목으로 대신한다.
+ * 회원 API(온보딩, 내 프로필 조회)와 온보딩 전 접근 차단을 보안 필터·예외 처리기와 함께 확인한다. Redis 저장소는 목으로 대신한다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -69,6 +73,99 @@ class MemberApiTest {
                 .build());
     }
 
+    private String bearer(Member member) {
+        return "Bearer " + jwtProvider.createAccessToken(member.getId());
+    }
+
+    @Test
+    void 온보딩하면_204() throws Exception {
+        Member member = saveMember();
+
+        mockMvc.perform(patch("/members/me/onboarding")
+                        .header("Authorization", bearer(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\":\" 태균 \"}"))
+                .andExpect(status().isNoContent());
+
+        Member found = memberRepository.findById(member.getId()).orElseThrow();
+        assertThat(found.getNickname()).isEqualTo("태균");
+        assertThat(found.isOnboarded()).isTrue();
+    }
+
+    @Test
+    void 토큰_없이_온보딩하면_401() throws Exception {
+        mockMvc.perform(patch("/members/me/onboarding")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\":\"태균\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("GLOBAL_401_1"));
+    }
+
+    @Test
+    void 닉네임이_없으면_400() throws Exception {
+        Member member = saveMember();
+
+        mockMvc.perform(patch("/members/me/onboarding")
+                        .header("Authorization", bearer(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("MEMBER_400_1"));
+    }
+
+    @Test
+    void 본문이_JSON이_아니면_400() throws Exception {
+        Member member = saveMember();
+
+        mockMvc.perform(patch("/members/me/onboarding")
+                        .header("Authorization", bearer(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("not-json"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("GLOBAL_400_1"));
+    }
+
+    @Test
+    void 이미_온보딩했으면_409() throws Exception {
+        Member member = saveMember();
+        member.completeOnboarding("태균");
+
+        mockMvc.perform(patch("/members/me/onboarding")
+                        .header("Authorization", bearer(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\":\"다른닉네임\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("MEMBER_409_1"));
+    }
+
+    @Test
+    void 온보딩_전_회원은_허용된_API_외에는_403() throws Exception {
+        Member member = saveMember();
+
+        // 컨트롤러까지 갔다면 404가 나온다. 필터에서 먼저 막혀야 한다.
+        mockMvc.perform(get("/no-such-path").header("Authorization", bearer(member)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MEMBER_403_1"));
+    }
+
+    @Test
+    void 온보딩_전에도_로그아웃할_수_있다() throws Exception {
+        Member member = saveMember();
+
+        mockMvc.perform(post("/auth/logout").header("Authorization", bearer(member)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void 온보딩한_회원은_막지_않는다() throws Exception {
+        Member member = saveMember();
+        member.completeOnboarding("태균");
+
+        mockMvc.perform(get("/no-such-path").header("Authorization", bearer(member)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GLOBAL_404_1"));
+    }
+
     @Test
     void 내_프로필을_조회한다() throws Exception {
         Member member = saveMember();
@@ -76,8 +173,7 @@ class MemberApiTest {
         savePosition(member, Position.MF, 2);
         savePosition(member, Position.FW, 1);
 
-        mockMvc.perform(get("/members/me")
-                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(member.getId())))
+        mockMvc.perform(get("/members/me").header("Authorization", bearer(member)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.memberId").value(member.getId()))
                 .andExpect(jsonPath("$.email").value("player@gmail.com"))
@@ -89,18 +185,27 @@ class MemberApiTest {
     }
 
     @Test
-    void 탈퇴한_회원이면_404() throws Exception {
+    void 온보딩_전에는_프로필을_조회할_수_없다() throws Exception {
         Member member = saveMember();
+
+        mockMvc.perform(get("/members/me").header("Authorization", bearer(member)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MEMBER_403_1"));
+    }
+
+    @Test
+    void 탈퇴한_회원이_프로필을_조회하면_404() throws Exception {
+        Member member = saveMember();
+        member.completeOnboarding("효오");
         member.withdraw(LocalDateTime.now());
 
-        mockMvc.perform(get("/members/me")
-                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(member.getId())))
+        mockMvc.perform(get("/members/me").header("Authorization", bearer(member)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("MEMBER_404_1"));
     }
 
     @Test
-    void 토큰_없이_조회하면_401() throws Exception {
+    void 토큰_없이_프로필을_조회하면_401() throws Exception {
         mockMvc.perform(get("/members/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("GLOBAL_401_1"));

@@ -147,10 +147,11 @@
 | D-05b | refresh 토큰 저장·로그아웃 처리 | 확정(2026-10-19·21, 김태균) | 로그아웃 | **Redis 도입**(의존성·접속 설정 추가). 로그아웃 시 refresh 토큰 삭제 + access 토큰을 남은 만료 시간만큼 Redis 블랙리스트에 등록 |
 | D-05c | 로그인 수단 | 확정(2026-10-19, 김태균) | 로그인, 회원가입 | **Google OAuth로만 로그인**. 자체 이메일·비밀번호 로그인 없음. 회원가입은 첫 Google 로그인 뒤 온보딩으로 진행. ERD와 충돌 → C-15 |
 | D-05d | Google OAuth 연동 흐름 | 확정(2026-10-21, 김태균) | 로그인 | **서버 리다이렉트**(Spring `oauth2-client`). 콜백 성공 시 프론트 URI에 **1회용 코드**(Redis, 1분)를 붙여 리다이렉트하고, 프론트가 `POST /auth/token`으로 토큰과 교환한다. JWT 라이브러리는 **jjwt**. refresh는 재발급할 때마다 **회전**. 탈퇴한 회원이 같은 Google 계정으로 로그인하면 **계정 복구** |
-| D-05e | 온보딩 입력 항목·미완료 회원 처리 | 확정(2026-10-21, 김태균) | 회원가입(온보딩) | **Sprint 1은 닉네임만** 입력. 선호 포지션은 Sprint 2 "포지션 복수 선택"에서 추가. `is_onboarded=0` 회원은 온보딩·로그아웃·탈퇴·토큰 재발급 외 API 접근 차단 |
+| D-05e | 온보딩 입력 항목·미완료 회원 처리 | 확정(2026-10-21, 김태균) | 회원가입(온보딩) | **Sprint 1은 닉네임만** 입력. 닉네임은 앞뒤 공백 제거 후 2~10자, 중복 허용. API는 `PATCH /members/me/onboarding`(본문 `{"nickname"}`), 성공 시 **204**. 선호 포지션은 Sprint 2 "포지션 복수 선택"에서 추가. `is_onboarded=0` 회원은 온보딩·로그아웃·탈퇴·토큰 재발급 외 API 접근 차단 |
 | D-06 | DB·영속성 | 확정(2026-10-21, 김태균) — 스키마 관리 방식 미결정 | 엔티티 작성 | **PostgreSQL + Spring Data JPA**, 테스트는 **H2**. ERD DDL은 MySQL 문법 → C-09. 스키마 생성 방식(ddl-auto / 마이그레이션 도구)은 미결정 |
 | D-07 | URL·HTTP 규칙 | 접두사만 확정(2026-10-21, 김태균) | 모든 API | **버전·`/api` 접두사 없음**(예: `/auth/token`). 복수형 명사·하위 리소스 중첩(제안: `/games/{id}/players`)은 미결정 |
 | D-08 | 코드 스타일·DTO 규칙 | 엔티티 규칙만 확정(2026-10-21, 김태균) — DTO·포매터 미결정 | 모든 코드 | **Lombok 사용.** 엔티티는 `@NoArgsConstructor(access = PROTECTED)`, `@AllArgsConstructor(access = PRIVATE)`, `@Builder`, `@Getter`, `@EntityListeners(AuditingEntityListener.class)`(생성일은 `@CreatedDate`). 기본값 컬럼은 `@Builder.Default`. `@Setter`·`@Data`는 쓰지 않고 상태 변경은 메서드로. DTO 규칙(제안: `record`, `XxxRequest`/`XxxResponse`)은 미결정 |
 | D-09 | 테스트 필수 여부 | 미결정 | 팀 전체 새 테스트 의무 정책 | Notion은 "선택". 서비스 단위 테스트 필수화 여부 결정 |
 | D-10 | PR base 브랜치 | 미결정 | 모든 PR | C-01과 함께 결정: `develop` 생성 / `main` 직행 |
+| D-12 | 회원 기능 구현 순서 | 확정(2026-10-21, 김태균) | 온보딩 API | 로그인(Security·JWT·Google OAuth·Redis)을 먼저 구현하고 온보딩은 그 뒤. 로그인 병합(PR #6) 뒤 온보딩 시작(2026-10-21 지시) |
 | D-11 | API 문서화 도구 | 미결정 | 프론트 연동 | springdoc(Swagger UI) 도입 여부 |

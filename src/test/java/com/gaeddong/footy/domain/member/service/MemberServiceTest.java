@@ -1,88 +1,101 @@
 package com.gaeddong.footy.domain.member.service;
 
 import com.gaeddong.footy.domain.member.domain.Member;
-import com.gaeddong.footy.domain.member.domain.MemberPosition;
-import com.gaeddong.footy.domain.member.domain.Position;
 import com.gaeddong.footy.domain.member.domain.Provider;
 import com.gaeddong.footy.domain.member.domain.repository.MemberPositionRepository;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
-import com.gaeddong.footy.domain.member.presentation.dto.MyProfileResponse;
-import com.gaeddong.footy.domain.member.presentation.dto.MyProfileResponse.PositionResponse;
-import com.gaeddong.footy.global.config.JpaAuditingConfig;
 import com.gaeddong.footy.global.error.FootyException;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.context.annotation.Import;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
-@DataJpaTest
-@Import({JpaAuditingConfig.class, MemberService.class})
 class MemberServiceTest {
 
-    @Autowired
-    private MemberService memberService;
+    private final MemberRepository memberRepository = mock(MemberRepository.class);
+    private final MemberService memberService = new MemberService(memberRepository, mock(MemberPositionRepository.class));
 
-    @Autowired
-    private MemberRepository memberRepository;
-
-    @Autowired
-    private MemberPositionRepository memberPositionRepository;
-
-    private Member saveMember(String email, String providerId) {
-        return memberRepository.saveAndFlush(Member.builder()
-                .email(email)
+    private static Member newMember() {
+        return Member.builder()
+                .email("player@gmail.com")
                 .provider(Provider.GOOGLE)
-                .providerId(providerId)
-                .build());
-    }
-
-    private void savePosition(Member member, Position position, int priority) {
-        memberPositionRepository.saveAndFlush(MemberPosition.builder()
-                .member(member)
-                .position(position)
-                .priority(priority)
-                .build());
+                .providerId("google-sub-1")
+                .build();
     }
 
     @Test
-    void 선호_포지션을_우선순위_순으로_반환한다() {
-        Member member = saveMember("player@gmail.com", "google-sub-1");
-        savePosition(member, Position.MF, 2);
-        savePosition(member, Position.FW, 1);
+    void 온보딩하면_공백을_제거한_닉네임이_저장된다() {
+        Member member = newMember();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
 
-        MyProfileResponse profile = memberService.getMyProfile(member.getId());
+        memberService.completeOnboarding(1L, "  태균  ");
 
-        assertThat(profile.memberId()).isEqualTo(member.getId());
-        assertThat(profile.email()).isEqualTo("player@gmail.com");
-        assertThat(profile.nickname()).isNull();
-        assertThat(profile.onboarded()).isFalse();
-        assertThat(profile.positions()).containsExactly(
-                new PositionResponse(Position.FW, 1),
-                new PositionResponse(Position.MF, 2)
-        );
+        assertThat(member.getNickname()).isEqualTo("태균");
+        assertThat(member.isOnboarded()).isTrue();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"가나", "가나다라마바사아자차"})
+    void 닉네임은_2자_이상_10자_이하다(String nickname) {
+        Member member = newMember();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+
+        memberService.completeOnboarding(1L, nickname);
+
+        assertThat(member.getNickname()).isEqualTo(nickname);
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", "   ", "가", " 가 ", "가나다라마바사아자차카"})
+    void 닉네임_길이가_맞지_않으면_400(String nickname) {
+        assertThatThrownBy(() -> memberService.completeOnboarding(1L, nickname))
+                .isInstanceOf(FootyException.class)
+                .extracting("errorCode").isEqualTo(MemberErrorCode.INVALID_NICKNAME);
+        verify(memberRepository, never()).findById(any());
     }
 
     @Test
-    void 없는_회원이면_예외가_발생한다() {
-        assertThatThrownBy(() -> memberService.getMyProfile(-1L))
-                .isInstanceOfSatisfying(FootyException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+    void 없는_회원이면_404() {
+        given(memberRepository.findById(1L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> memberService.completeOnboarding(1L, "태균"))
+                .isInstanceOf(FootyException.class)
+                .extracting("errorCode").isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND);
     }
 
     @Test
-    void 탈퇴한_회원이면_예외가_발생한다() {
-        Member member = saveMember("left@gmail.com", "google-sub-2");
-        member.withdraw(LocalDateTime.now());
-        memberRepository.saveAndFlush(member);
+    void 탈퇴한_회원이면_404() {
+        Member member = newMember();
+        member.withdraw(LocalDateTime.of(2026, 10, 21, 12, 0));
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
 
-        assertThatThrownBy(() -> memberService.getMyProfile(member.getId()))
-                .isInstanceOfSatisfying(FootyException.class,
-                        e -> assertThat(e.getErrorCode()).isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND));
+        assertThatThrownBy(() -> memberService.completeOnboarding(1L, "태균"))
+                .isInstanceOf(FootyException.class)
+                .extracting("errorCode").isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND);
+    }
+
+    @Test
+    void 이미_온보딩한_회원이면_409() {
+        Member member = newMember();
+        member.completeOnboarding("태균");
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+
+        assertThatThrownBy(() -> memberService.completeOnboarding(1L, "다른닉네임"))
+                .isInstanceOf(FootyException.class)
+                .extracting("errorCode").isEqualTo(MemberErrorCode.ALREADY_ONBOARDED);
+        assertThat(member.getNickname()).isEqualTo("태균");
     }
 }
