@@ -17,7 +17,7 @@ import java.util.Set;
 
 /**
  * 온보딩을 마치지 않은 회원은 아래 API만 쓸 수 있고, 나머지는 403으로 막는다(D-05e).
- * 토큰 재발급은 인증 없이 열려 있어 여기서 검사하지 않는다. 탈퇴 API를 추가하면 허용 목록에 넣는다.
+ * 토큰 재발급은 인증 없이 열려 있어 여기서 검사하지 않는다.
  * 온보딩 직후 바로 풀리도록 토큰이 아닌 DB의 is_onboarded를 확인한다.
  */
 @RequiredArgsConstructor
@@ -25,7 +25,8 @@ public class OnboardingFilter extends OncePerRequestFilter {
 
     private static final Set<String> ALLOWED_REQUESTS = Set.of(
             "PATCH /members/me/onboarding",
-            "POST /auth/logout");
+            "POST /auth/logout",
+            "DELETE /members/me");
 
     private final MemberRepository memberRepository;
     private final ErrorResponseWriter errorResponseWriter;
