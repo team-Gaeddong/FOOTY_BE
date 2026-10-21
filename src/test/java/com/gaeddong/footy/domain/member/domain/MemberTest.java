@@ -2,6 +2,7 @@ package com.gaeddong.footy.domain.member.domain;
 
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -11,9 +12,27 @@ class MemberTest {
 
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 10, 21, 12, 0);
 
+    private static Member newMember() {
+        return Member.builder()
+                .email("player@gmail.com")
+                .provider(Provider.GOOGLE)
+                .providerId("google-sub-1")
+                .build();
+    }
+
+    @Test
+    void 새_회원은_온보딩_전_상태다() {
+        Member member = newMember();
+
+        assertThat(member.getNickname()).isNull();
+        assertThat(member.getRating()).isEqualByComparingTo(BigDecimal.ZERO);
+        assertThat(member.isOnboarded()).isFalse();
+        assertThat(member.isDeleted()).isFalse();
+    }
+
     @Test
     void 온보딩을_마치면_닉네임이_채워진다() {
-        Member member = Member.signUp("player@gmail.com", Provider.GOOGLE, "google-sub-1", NOW);
+        Member member = newMember();
 
         member.completeOnboarding("태균");
 
@@ -23,7 +42,7 @@ class MemberTest {
 
     @Test
     void 온보딩은_한_번만_할_수_있다() {
-        Member member = Member.signUp("player@gmail.com", Provider.GOOGLE, "google-sub-1", NOW);
+        Member member = newMember();
         member.completeOnboarding("태균");
 
         assertThatThrownBy(() -> member.completeOnboarding("다른닉네임"))
@@ -32,7 +51,7 @@ class MemberTest {
 
     @Test
     void 탈퇴하면_소프트_삭제된다() {
-        Member member = Member.signUp("player@gmail.com", Provider.GOOGLE, "google-sub-1", NOW);
+        Member member = newMember();
 
         member.withdraw(NOW.plusDays(1));
 

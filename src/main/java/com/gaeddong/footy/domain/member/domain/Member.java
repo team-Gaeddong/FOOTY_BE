@@ -2,6 +2,7 @@ package com.gaeddong.footy.domain.member.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
@@ -9,16 +10,26 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 /**
  * 회원. 스키마는 docs/erd/footy_erd.sql의 member, UNIQUE는 docs/erd/constraints.md를 따른다.
  * 첫 Google 로그인 때 생성되고, 온보딩을 마치면 nickname이 채워진다(C-15).
  */
 @Entity
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
+@Getter
 @Table(
         name = "member",
         uniqueConstraints = {
@@ -26,6 +37,7 @@ import java.util.Objects;
                 @UniqueConstraint(name = "uk_member_provider", columnNames = {"provider", "provider_id"})
         }
 )
+@EntityListeners(AuditingEntityListener.class)
 public class Member {
 
     @Id
@@ -39,13 +51,16 @@ public class Member {
     @Column(name = "nickname", length = 30)
     private String nickname;
 
+    @Builder.Default
     @Column(name = "rating", nullable = false, precision = 5, scale = 2)
-    private BigDecimal rating;
+    private BigDecimal rating = BigDecimal.ZERO;
 
+    @Builder.Default
     @Column(name = "is_deleted", nullable = false)
-    private boolean deleted;
+    private boolean deleted = false;
 
-    @Column(name = "created_at", nullable = false)
+    @CreatedDate
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(name = "deleted_at")
@@ -58,34 +73,15 @@ public class Member {
     @Column(name = "provider_id", nullable = false, length = 255)
     private String providerId;
 
+    @Builder.Default
     @Column(name = "is_onboarded", nullable = false)
-    private boolean onboarded;
-
-    protected Member() {
-    }
-
-    private Member(String email, Provider provider, String providerId, LocalDateTime createdAt) {
-        this.email = Objects.requireNonNull(email);
-        this.provider = Objects.requireNonNull(provider);
-        this.providerId = Objects.requireNonNull(providerId);
-        this.createdAt = Objects.requireNonNull(createdAt);
-        this.rating = BigDecimal.ZERO;
-        this.deleted = false;
-        this.onboarded = false;
-    }
-
-    /**
-     * 첫 소셜 로그인 때 온보딩 전 회원을 만든다.
-     */
-    public static Member signUp(String email, Provider provider, String providerId, LocalDateTime now) {
-        return new Member(email, provider, providerId, now);
-    }
+    private boolean onboarded = false;
 
     public void completeOnboarding(String nickname) {
         if (onboarded) {
             throw new IllegalStateException("이미 온보딩을 마친 회원입니다.");
         }
-        this.nickname = Objects.requireNonNull(nickname);
+        this.nickname = nickname;
         this.onboarded = true;
     }
 
@@ -97,46 +93,6 @@ public class Member {
             throw new IllegalStateException("이미 탈퇴한 회원입니다.");
         }
         this.deleted = true;
-        this.deletedAt = Objects.requireNonNull(now);
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public String getNickname() {
-        return nickname;
-    }
-
-    public BigDecimal getRating() {
-        return rating;
-    }
-
-    public boolean isDeleted() {
-        return deleted;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public LocalDateTime getDeletedAt() {
-        return deletedAt;
-    }
-
-    public Provider getProvider() {
-        return provider;
-    }
-
-    public String getProviderId() {
-        return providerId;
-    }
-
-    public boolean isOnboarded() {
-        return onboarded;
+        this.deletedAt = now;
     }
 }

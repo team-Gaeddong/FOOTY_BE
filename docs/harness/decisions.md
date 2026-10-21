@@ -150,7 +150,7 @@
 | D-05e | 온보딩 입력 항목·미완료 회원 처리 | 확정(2026-10-21, 김태균) | 회원가입(온보딩) | **Sprint 1은 닉네임만** 입력. 선호 포지션은 Sprint 2 "포지션 복수 선택"에서 추가. `is_onboarded=0` 회원은 온보딩·로그아웃·탈퇴·토큰 재발급 외 API 접근 차단 |
 | D-06 | DB·영속성 | 확정(2026-10-21, 김태균) — 스키마 관리 방식 미결정 | 엔티티 작성 | **PostgreSQL + Spring Data JPA**, 테스트는 **H2**. ERD DDL은 MySQL 문법 → C-09. 스키마 생성 방식(ddl-auto / 마이그레이션 도구)은 미결정 |
 | D-07 | URL·HTTP 규칙 | 미결정 | 모든 API | `/api/v1` 접두사, 복수형 명사, 경기 하위 리소스 중첩(`/games/{id}/players`) |
-| D-08 | 코드 스타일·DTO 규칙 | 미결정 | 모든 코드 | 요청·응답 DTO는 `record`, 이름은 `XxxRequest`/`XxxResponse`, 포매터 지정 |
+| D-08 | 코드 스타일·DTO 규칙 | 엔티티 규칙만 확정(2026-10-21, 김태균) — DTO·포매터 미결정 | 모든 코드 | **Lombok 사용.** 엔티티는 `@NoArgsConstructor(access = PROTECTED)`, `@AllArgsConstructor(access = PRIVATE)`, `@Builder`, `@Getter`, `@EntityListeners(AuditingEntityListener.class)`(생성일은 `@CreatedDate`). 기본값 컬럼은 `@Builder.Default`. `@Setter`·`@Data`는 쓰지 않고 상태 변경은 메서드로. DTO 규칙(제안: `record`, `XxxRequest`/`XxxResponse`)은 미결정 |
 | D-09 | 테스트 필수 여부 | 미결정 | 팀 전체 새 테스트 의무 정책 | Notion은 "선택". 서비스 단위 테스트 필수화 여부 결정 |
 | D-10 | PR base 브랜치 | 미결정 | 모든 PR | C-01과 함께 결정: `develop` 생성 / `main` 직행 |
 | D-11 | API 문서화 도구 | 미결정 | 프론트 연동 | springdoc(Swagger UI) 도입 여부 |
