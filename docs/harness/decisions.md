@@ -140,16 +140,16 @@
 |---|---|---|---|---|
 | D-01 | 아키텍처·계층 구조 | 확정(2026-10-21, 김태균) — 세부 해석은 C-16 | 모든 API | 도메인별로 `domain`(엔티티·리포지토리), `exception`, `facade`, `presentation`(컨트롤러·DTO), `service` 패키지를 둔다 |
 | D-02 | 기본 패키지명 | 확정(2026-10-21, 김태균) | 모든 코드 | **`com.gaeddong.footy`** (`group = 'com.gaeddong'`) |
-| D-03 | API 성공 응답 형식 | 미결정 | 모든 API | 공통 래퍼 없이 리소스 그대로 반환 / 공통 래퍼(`data` 등) 중 택1 |
-| D-04 | 에러 응답·예외 처리 | 미결정 | 모든 API | 전역 예외 처리기 + 에러 코드·메시지 필드 고정 |
+| D-03 | API 성공 응답 형식 | 확정(2026-10-21, 김태균) | 모든 API | **공통 래퍼 없이 리소스(응답 DTO) 그대로 반환**. 성공 여부는 상태 코드로 표현 |
+| D-04 | 에러 응답·예외 처리 | 확정(2026-10-21, 김태균) | 모든 API | **전역 예외 처리기(`global/error`의 `@RestControllerAdvice`) + ErrorCode(HTTP 상태·코드·메시지)**. 응답 본문은 `{"code": "AUTH_401_1", "message": "..."}`이고 HTTP 상태는 상태 코드로만 표현. 코드는 `{도메인}_{HTTP 상태}_{순번}`. 도메인별 에러 코드는 각 도메인의 `exception` 패키지 |
 | D-05 | 인증 방식 | 확정(2026-10-19, 김태균) | 로그인 이후 모든 API | **JWT**. 세부 사항은 아래 D-05a~e |
 | D-05a | JWT 토큰 구성 | 확정(2026-10-19·21, 김태균) | 로그인, 로그아웃 | **access + refresh 토큰**. 만료: access 30분, refresh 14일. 서명 키는 환경변수 |
 | D-05b | refresh 토큰 저장·로그아웃 처리 | 확정(2026-10-19·21, 김태균) | 로그아웃 | **Redis 도입**(의존성·접속 설정 추가). 로그아웃 시 refresh 토큰 삭제 + access 토큰을 남은 만료 시간만큼 Redis 블랙리스트에 등록 |
 | D-05c | 로그인 수단 | 확정(2026-10-19, 김태균) | 로그인, 회원가입 | **Google OAuth로만 로그인**. 자체 이메일·비밀번호 로그인 없음. 회원가입은 첫 Google 로그인 뒤 온보딩으로 진행. ERD와 충돌 → C-15 |
-| D-05d | Google OAuth 연동 흐름 | 미결정 | 로그인 | 서버 리다이렉트(Spring `oauth2-client`, 콜백 후 JWT 발급) / 클라이언트가 Google ID 토큰을 받아 서버가 검증 후 JWT 발급. 프론트 형태(웹·앱)에 따라 결정 |
+| D-05d | Google OAuth 연동 흐름 | 확정(2026-10-21, 김태균) | 로그인 | **서버 리다이렉트**(Spring `oauth2-client`). 콜백 성공 시 프론트 URI에 **1회용 코드**(Redis, 1분)를 붙여 리다이렉트하고, 프론트가 `POST /auth/token`으로 토큰과 교환한다. JWT 라이브러리는 **jjwt**. refresh는 재발급할 때마다 **회전**. 탈퇴한 회원이 같은 Google 계정으로 로그인하면 **계정 복구** |
 | D-05e | 온보딩 입력 항목·미완료 회원 처리 | 확정(2026-10-21, 김태균) | 회원가입(온보딩) | **Sprint 1은 닉네임만** 입력. 선호 포지션은 Sprint 2 "포지션 복수 선택"에서 추가. `is_onboarded=0` 회원은 온보딩·로그아웃·탈퇴·토큰 재발급 외 API 접근 차단 |
 | D-06 | DB·영속성 | 확정(2026-10-21, 김태균) — 스키마 관리 방식 미결정 | 엔티티 작성 | **PostgreSQL + Spring Data JPA**, 테스트는 **H2**. ERD DDL은 MySQL 문법 → C-09. 스키마 생성 방식(ddl-auto / 마이그레이션 도구)은 미결정 |
-| D-07 | URL·HTTP 규칙 | 미결정 | 모든 API | `/api/v1` 접두사, 복수형 명사, 경기 하위 리소스 중첩(`/games/{id}/players`) |
+| D-07 | URL·HTTP 규칙 | 접두사만 확정(2026-10-21, 김태균) | 모든 API | **버전·`/api` 접두사 없음**(예: `/auth/token`). 복수형 명사·하위 리소스 중첩(제안: `/games/{id}/players`)은 미결정 |
 | D-08 | 코드 스타일·DTO 규칙 | 엔티티 규칙만 확정(2026-10-21, 김태균) — DTO·포매터 미결정 | 모든 코드 | **Lombok 사용.** 엔티티는 `@NoArgsConstructor(access = PROTECTED)`, `@AllArgsConstructor(access = PRIVATE)`, `@Builder`, `@Getter`, `@EntityListeners(AuditingEntityListener.class)`(생성일은 `@CreatedDate`). 기본값 컬럼은 `@Builder.Default`. `@Setter`·`@Data`는 쓰지 않고 상태 변경은 메서드로. DTO 규칙(제안: `record`, `XxxRequest`/`XxxResponse`)은 미결정 |
 | D-09 | 테스트 필수 여부 | 미결정 | 팀 전체 새 테스트 의무 정책 | Notion은 "선택". 서비스 단위 테스트 필수화 여부 결정 |
 | D-10 | PR base 브랜치 | 미결정 | 모든 PR | C-01과 함께 결정: `develop` 생성 / `main` 직행 |
