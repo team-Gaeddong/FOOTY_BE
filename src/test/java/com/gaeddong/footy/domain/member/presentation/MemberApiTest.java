@@ -17,6 +17,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -24,7 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 온보딩(회원가입) API와 온보딩 전 접근 차단을 보안 필터·예외 처리기와 함께 확인한다. Redis 저장소는 목으로 대신한다.
+ * 온보딩(회원가입)·탈퇴 API와 온보딩 전 접근 차단을 보안 필터·예외 처리기와 함께 확인한다. Redis 저장소는 목으로 대신한다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -148,5 +152,28 @@ class MemberApiTest {
         mockMvc.perform(get("/no-such-path").header("Authorization", bearer(member)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("GLOBAL_404_1"));
+    }
+
+    @Test
+    void 탈퇴하면_204이고_토큰을_무효화한다() throws Exception {
+        // 온보딩 전 회원도 탈퇴할 수 있다(D-05e).
+        Member member = saveMember();
+        String accessToken = jwtProvider.createAccessToken(member.getId());
+
+        mockMvc.perform(delete("/members/me").header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isNoContent());
+
+        Member found = memberRepository.findById(member.getId()).orElseThrow();
+        assertThat(found.isDeleted()).isTrue();
+        assertThat(found.getDeletedAt()).isNotNull();
+        verify(refreshTokenRepository).deleteByMemberId(member.getId());
+        verify(blacklistRepository).save(eq(accessToken), any());
+    }
+
+    @Test
+    void 토큰_없이_탈퇴하면_401() throws Exception {
+        mockMvc.perform(delete("/members/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("GLOBAL_401_1"));
     }
 }
