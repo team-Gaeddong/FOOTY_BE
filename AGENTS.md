@@ -31,8 +31,8 @@ FOOTY는 축구 경기를 만들고, 참가 선수의 포지션·실력을 바�
 
 - Java 21 (Gradle toolchain), Spring Boot 4.1.1, Gradle 9.7.1 wrapper
 - 기본 패키지: `com.gaeddong.footy` (D-02). 도메인별로 `domain.{도메인}.{domain,domain.repository,exception,facade,presentation,service}`, 공통 코드는 `global` (D-01, 해석은 C-16)
-- 선언된 의존성: `spring-boot-starter`, `spring-boot-starter-data-jpa`, `lombok`(compileOnly·annotationProcessor), 런타임 `postgresql`, 테스트 `spring-boot-starter-test`, `spring-boot-starter-data-jpa-test`, `h2`, `junit-platform-launcher`. Web, Validation, Security, OAuth2, JWT, Redis는 아직 없다.
-- 설정 파일: `src/main/resources/application.properties` (PostgreSQL 접속 정보는 환경변수 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `ddl-auto=none`), 테스트는 `src/test/resources/application.properties` (H2 PostgreSQL 모드, `create-drop`)
+- 선언된 의존성: `spring-boot-starter`, `spring-boot-starter-data-jpa`, `spring-boot-starter-webmvc`, `spring-boot-starter-security`, `spring-boot-starter-security-oauth2-client`, `spring-boot-starter-data-redis`, `jjwt` 0.13.0(D-05·D-05b·D-05d), `lombok`(compileOnly·annotationProcessor), 런타임 `postgresql`, 테스트 `spring-boot-starter-test`, `spring-boot-starter-data-jpa-test`, `spring-boot-starter-webmvc-test`, `spring-boot-starter-security-test`, `h2`, `junit-platform-launcher`. Validation은 아직 없다.
+- 설정 파일: `src/main/resources/application.properties` (비밀·접속 정보는 환경변수: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`, `JWT_SECRET`(32바이트 이상), `OAUTH_REDIRECT_URI`. `ddl-auto=none`), 테스트는 `src/test/resources/application.properties` (H2 PostgreSQL 모드, `create-drop`)
 - 원격 저장소: `team-Gaeddong/FOOTY_BE` (2026-10-14 조회: public), 기본 브랜치 `main`
 
 의존성 추가·DB 선택·패키지 구조는 팀 결정 사항이다. 결정 전에는 추가하지 않는다.
@@ -69,7 +69,7 @@ FOOTY는 축구 경기를 만들고, 참가 선수의 포지션·실력을 바�
 python3 -m unittest discover -s scripts/harness/tests -v  # 하네스 변경 시 회귀 검사
 ```
 
-- 2026-10-21 기준 `./gradlew test`는 통과한다(8개: `FootyBeApplicationTests`, `MemberTest`, `MemberRepositoryTest`).
+- 2026-10-21 기준 `./gradlew test`는 통과한다(30개: `FootyBeApplicationTests`, `MemberTest`, `MemberRepositoryTest`, `JwtProviderTest`, `AuthServiceTest`, `AuthApiTest`). 테스트는 실제 Redis 없이 돈다(Redis 저장소는 목).
 - `.github/workflows/harness.yml`은 PR 변경 검사와 기본 브랜치 빌드를 수행한다. 원격에 반영된 뒤에만 CI가 실행되며, 브랜치 보호의 필수 검사 `harness`와 사람 승인 1명 설정은 별도로 적용해야 한다(`README.md`).
 - 종료 코드 0은 명시한 모드의 통과, 1은 실패, 2는 일부 검사다. `--skip-build` 또는 변경 커밋 0개는 완료 증거가 아니다. 기준 ref 누락·얕은 이력은 실패다.
 - 기존 테스트 실행은 필수다. 새 정상·예외 테스트는 권장하며, 팀 전체 필수화는 D-09 확정 후 적용한다. 사용자·이슈가 요구한 테스트는 필수로 수행한다. 누락한 검증 범위는 보고한다.
