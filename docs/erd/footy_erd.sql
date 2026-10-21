@@ -2,7 +2,7 @@
 -- 원본: ERD Cloud "footy" 다이어그램 (2026-10-14 Import한 DDL, 2026-10-19 member 변경 반영)
 -- 원본과 다르면 원본이 우선이다. 차이는 docs/harness/decisions.md C-12, C-15 참고.
 -- 컬럼·NULL·DEFAULT·FK는 원본 Export와 일치.
--- UNIQUE의 기준은 docs/erd/constraints.md (원본 ERD Cloud에 표기 불가). AUTO_INCREMENT는 C-12 미결정.
+-- UNIQUE·AUTO_INCREMENT의 기준은 docs/erd/constraints.md (원본 ERD Cloud에 표기 불가).
 -- 원본 URL 및 검증 범위: docs/harness/sources.md (원본 Export 전체 대조 미완료).
 
 CREATE TABLE member (

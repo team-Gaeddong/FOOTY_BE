@@ -67,7 +67,8 @@
 - 영향: 경기와 무관한 상시 모임 공지가 필요하면 스키마 변경 필요
 
 ### C-09 ERD의 DB 방언과 프로젝트 설정
-- 상태: 보고됨
+- 상태: 보고됨 — D-06에서 PostgreSQL 확정(2026-10-21). ERD Cloud Export 방언(MySQL)과 다름
+- 매핑 기준(제안): `TINYINT(1)` → `boolean`, `DATETIME` → `timestamp`, `AUTO_INCREMENT` → identity. ERD Cloud의 DB 설정을 PostgreSQL로 바꿀지, 사본만 변환할지 결정 필요
 - ERD: MySQL 문법 DDL(`AUTO_INCREMENT`, `TINYINT(1)`, `COMMENT`)
 - 저장소: DB 드라이버·JPA·datasource 설정 없음, 사용할 DB 문서 없음
 - 영향: D-06
@@ -83,8 +84,8 @@
 - 저장소 커밋 `3da8795 first commit`, `116ed8c init`은 커밋 규칙 형식이 아님. 규칙 도입 전 커밋으로 보고 검사 대상에서 제외(검사기는 지정된 base와 HEAD의 공통 조상 이후 커밋만 검사). `5920d19 feat :: 백엔드 harness 구축`도 형식 위반이었다. 이력을 재작성하거나 해당 커밋만 예외 처리하지 않는다. 현재 main을 base로 한 새 변경 범위부터 검사한다
 
 ### C-12 ERD 원본에 AUTO_INCREMENT·UNIQUE 표현 없음
-- 상태: UNIQUE 확정(2026-10-19, 김태균) / AUTO_INCREMENT 미결정
-- 결정: UNIQUE 제약의 기준은 `docs/erd/constraints.md`에 명시한다. ERD Cloud에는 표기하지 않는다
+- 상태: 확정(UNIQUE 2026-10-19, AUTO_INCREMENT 2026-10-21, 김태균)
+- 결정: UNIQUE 제약과 모든 PK의 AUTO_INCREMENT는 `docs/erd/constraints.md`에 명시한다. ERD Cloud에는 표기하지 않는다
 - 아래는 보고 당시 기록
 - 출처 A: `docs/erd/footy_erd.sql` — 모든 PK `AUTO_INCREMENT`, UNIQUE 6개(`uk_member_email`, `uk_member_provider`, `uk_game_player_member`, `uk_balance_review`, `uk_mvp_vote`, `uk_poll_answer`)
 - 출처 B: ERD Cloud `footy` Export (2026-10-19 Chrome에서 직접 확인) — 컬럼·NULL·DEFAULT·코멘트는 출처 A와 같음. FK 24개도 같음(앞선 "FK 없음"은 Export 옵션 `ADD FK CONSTRAINT`가 꺼져 있던 탓). `AUTO_INCREMENT`, UNIQUE는 없음. 컬럼 상세 창(Logical/Physical Name, Domain, Type, Allow null, Default, Comment)에 해당 항목이 없어 ERD Cloud에서 입력할 방법을 찾지 못함
@@ -121,6 +122,14 @@
 - 함께 정리할 것: AGENTS.md 4절 비밀번호 규칙, C-12의 `email` UNIQUE 여부
 - 결정할 사람/시점: 팀 / 회원 엔티티 작성 전
 
+### C-16 D-01 패키지 구조 해석과 기존 이슈 범위
+- 상태: 일부 결정(2026-10-21, 김태균) — Member 엔티티는 이슈 #3에서 만든다(game_player 등은 #1 범위). 패키지 해석은 팀 확인 필요
+- 출처 A: D-01 확정(2026-10-21) — `domain, exception, facade, presentation, service`
+- 해석(에이전트 적용안): `com.gaeddong.footy.domain.{도메인}.{domain,domain.repository,exception,facade,presentation,service}`, 공통 코드는 `com.gaeddong.footy.global`
+- 출처 B: GitHub 이슈 #1 "내 프로필 조회 api"(곽효오) — 본문에 "member, game_player 엔티티를 정의" 포함
+- 영향: Member 엔티티를 두 이슈에서 따로 만들면 충돌. 담당 조율 필요
+- 결정할 사람/시점: 김태균·곽효오 / Member 엔티티 작성 전
+
 원본 링크·대조 범위는 `sources.md`에서 관리한다. 지침 정리는 팀의 아키텍처·DB·인증 결정을 대신하지 않는다.
 
 ## D. 미결정 사항 (Notion·ERD·코드 어디에도 없음)
@@ -129,19 +138,19 @@
 
 | ID | 항목 | 상태 | 막히는 작업 | 제안 |
 |---|---|---|---|---|
-| D-01 | 아키텍처·계층 구조 | 미결정 | 모든 API | 도메인별 패키지 + Controller → Service → Repository 3계층, 엔티티는 컨트롤러 밖으로 노출하지 않음 |
-| D-02 | 기본 패키지명 | 미결정 | 모든 코드 | 현재 `com.example.footy_be` 유지 또는 팀 도메인으로 변경 |
+| D-01 | 아키텍처·계층 구조 | 확정(2026-10-21, 김태균) — 세부 해석은 C-16 | 모든 API | 도메인별로 `domain`(엔티티·리포지토리), `exception`, `facade`, `presentation`(컨트롤러·DTO), `service` 패키지를 둔다 |
+| D-02 | 기본 패키지명 | 확정(2026-10-21, 김태균) | 모든 코드 | **`com.gaeddong.footy`** (`group = 'com.gaeddong'`) |
 | D-03 | API 성공 응답 형식 | 미결정 | 모든 API | 공통 래퍼 없이 리소스 그대로 반환 / 공통 래퍼(`data` 등) 중 택1 |
 | D-04 | 에러 응답·예외 처리 | 미결정 | 모든 API | 전역 예외 처리기 + 에러 코드·메시지 필드 고정 |
-| D-05 | 인증 방식 | 확정(2026-10-19, 김태균) | 로그인 이후 모든 API | **JWT**. 세부 사항은 아래 D-05a~c에서 미결정 |
-| D-05a | JWT 토큰 구성 | 확정(2026-10-19, 김태균) — 만료 시간 값은 미결정 | 로그인, 로그아웃 | **access + refresh 토큰**. 만료 시간 값 미정. 서명 키는 환경변수 |
-| D-05b | refresh 토큰 저장·로그아웃 처리 | 확정(2026-10-19, 김태균) — 블랙리스트 여부 미결정 | 로그아웃 | **Redis 도입**(의존성·접속 설정 추가). 로그아웃 시 access 토큰 블랙리스트 여부 미정 |
+| D-05 | 인증 방식 | 확정(2026-10-19, 김태균) | 로그인 이후 모든 API | **JWT**. 세부 사항은 아래 D-05a~e |
+| D-05a | JWT 토큰 구성 | 확정(2026-10-19·21, 김태균) | 로그인, 로그아웃 | **access + refresh 토큰**. 만료: access 30분, refresh 14일. 서명 키는 환경변수 |
+| D-05b | refresh 토큰 저장·로그아웃 처리 | 확정(2026-10-19·21, 김태균) | 로그아웃 | **Redis 도입**(의존성·접속 설정 추가). 로그아웃 시 refresh 토큰 삭제 + access 토큰을 남은 만료 시간만큼 Redis 블랙리스트에 등록 |
 | D-05c | 로그인 수단 | 확정(2026-10-19, 김태균) | 로그인, 회원가입 | **Google OAuth로만 로그인**. 자체 이메일·비밀번호 로그인 없음. 회원가입은 첫 Google 로그인 뒤 온보딩으로 진행. ERD와 충돌 → C-15 |
 | D-05d | Google OAuth 연동 흐름 | 미결정 | 로그인 | 서버 리다이렉트(Spring `oauth2-client`, 콜백 후 JWT 발급) / 클라이언트가 Google ID 토큰을 받아 서버가 검증 후 JWT 발급. 프론트 형태(웹·앱)에 따라 결정 |
-| D-05e | 온보딩 입력 항목·미완료 회원 처리 | 미결정 | 회원가입(온보딩) | 입력: 닉네임 / 닉네임 + 선호 포지션(`member_position`, 프로필 담당과 범위 조율). 미완료 상태 표현은 C-15 결정에 따름 |
-| D-06 | DB·영속성 | 미결정 | 엔티티 작성 | MySQL + Spring Data JPA, 스키마 관리 방식(ddl-auto 금지 여부, 마이그레이션 도구) |
+| D-05e | 온보딩 입력 항목·미완료 회원 처리 | 확정(2026-10-21, 김태균) | 회원가입(온보딩) | **Sprint 1은 닉네임만** 입력. 선호 포지션은 Sprint 2 "포지션 복수 선택"에서 추가. `is_onboarded=0` 회원은 온보딩·로그아웃·탈퇴·토큰 재발급 외 API 접근 차단 |
+| D-06 | DB·영속성 | 확정(2026-10-21, 김태균) — 스키마 관리 방식 미결정 | 엔티티 작성 | **PostgreSQL + Spring Data JPA**, 테스트는 **H2**. ERD DDL은 MySQL 문법 → C-09. 스키마 생성 방식(ddl-auto / 마이그레이션 도구)은 미결정 |
 | D-07 | URL·HTTP 규칙 | 미결정 | 모든 API | `/api/v1` 접두사, 복수형 명사, 경기 하위 리소스 중첩(`/games/{id}/players`) |
-| D-08 | 코드 스타일·DTO 규칙 | 미결정 | 모든 코드 | 요청·응답 DTO는 `record`, 이름은 `XxxRequest`/`XxxResponse`, 포매터 지정 |
+| D-08 | 코드 스타일·DTO 규칙 | 엔티티 규칙만 확정(2026-10-21, 김태균) — DTO·포매터 미결정 | 모든 코드 | **Lombok 사용.** 엔티티는 `@NoArgsConstructor(access = PROTECTED)`, `@AllArgsConstructor(access = PRIVATE)`, `@Builder`, `@Getter`, `@EntityListeners(AuditingEntityListener.class)`(생성일은 `@CreatedDate`). 기본값 컬럼은 `@Builder.Default`. `@Setter`·`@Data`는 쓰지 않고 상태 변경은 메서드로. DTO 규칙(제안: `record`, `XxxRequest`/`XxxResponse`)은 미결정 |
 | D-09 | 테스트 필수 여부 | 미결정 | 팀 전체 새 테스트 의무 정책 | Notion은 "선택". 서비스 단위 테스트 필수화 여부 결정 |
 | D-10 | PR base 브랜치 | 미결정 | 모든 PR | C-01과 함께 결정: `develop` 생성 / `main` 직행 |
 | D-11 | API 문서화 도구 | 미결정 | 프론트 연동 | springdoc(Swagger UI) 도입 여부 |
