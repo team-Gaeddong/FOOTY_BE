@@ -8,6 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+
 @Service
 @RequiredArgsConstructor
 public class MemberService {
@@ -16,6 +19,7 @@ public class MemberService {
     private static final int NICKNAME_MAX_LENGTH = 10;
 
     private final MemberRepository memberRepository;
+    private final Clock clock;
 
     /**
      * 회원가입은 첫 Google 로그인 뒤의 온보딩이다(D-05c). Sprint 1은 닉네임만 받는다(D-05e).
@@ -24,13 +28,26 @@ public class MemberService {
     @Transactional
     public void completeOnboarding(Long memberId, String nickname) {
         String trimmed = validateNickname(nickname);
-        Member member = memberRepository.findById(memberId)
-                .filter(found -> !found.isDeleted())
-                .orElseThrow(() -> new FootyException(MemberErrorCode.MEMBER_NOT_FOUND));
+        Member member = findActiveMember(memberId);
         if (member.isOnboarded()) {
             throw new FootyException(MemberErrorCode.ALREADY_ONBOARDED);
         }
         member.completeOnboarding(trimmed);
+    }
+
+    /**
+     * 탈퇴는 소프트 삭제다. 같은 Google 계정으로 다시 로그인하면 복구된다(D-05d).
+     */
+    @Transactional
+    public void withdraw(Long memberId) {
+        Member member = findActiveMember(memberId);
+        member.withdraw(LocalDateTime.now(clock));
+    }
+
+    private Member findActiveMember(Long memberId) {
+        return memberRepository.findById(memberId)
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new FootyException(MemberErrorCode.MEMBER_NOT_FOUND));
     }
 
     private String validateNickname(String nickname) {
