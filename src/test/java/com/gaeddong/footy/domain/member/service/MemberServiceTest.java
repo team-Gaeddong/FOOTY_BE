@@ -2,6 +2,7 @@ package com.gaeddong.footy.domain.member.service;
 
 import com.gaeddong.footy.domain.member.domain.Member;
 import com.gaeddong.footy.domain.member.domain.Provider;
+import com.gaeddong.footy.domain.member.domain.repository.MemberPositionRepository;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
 import com.gaeddong.footy.global.error.FootyException;
@@ -28,7 +29,7 @@ class MemberServiceTest {
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 10, 21, 12, 0);
 
     private final MemberRepository memberRepository = mock(MemberRepository.class);
-    private final MemberService memberService = new MemberService(memberRepository,
+    private final MemberService memberService = new MemberService(memberRepository, mock(MemberPositionRepository.class),
             Clock.fixed(NOW.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()));
 
     private static Member newMember() {

@@ -1,8 +1,10 @@
 package com.gaeddong.footy.domain.member.service;
 
 import com.gaeddong.footy.domain.member.domain.Member;
+import com.gaeddong.footy.domain.member.domain.repository.MemberPositionRepository;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
+import com.gaeddong.footy.domain.member.presentation.dto.MyProfileResponse;
 import com.gaeddong.footy.global.error.FootyException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,7 @@ public class MemberService {
     private static final int NICKNAME_MAX_LENGTH = 10;
 
     private final MemberRepository memberRepository;
+    private final MemberPositionRepository memberPositionRepository;
     private final Clock clock;
 
     /**
@@ -33,6 +36,13 @@ public class MemberService {
             throw new FootyException(MemberErrorCode.ALREADY_ONBOARDED);
         }
         member.completeOnboarding(trimmed);
+    }
+
+    // 탈퇴한 회원은 없는 회원으로 본다
+    @Transactional(readOnly = true)
+    public MyProfileResponse getMyProfile(Long memberId) {
+        Member member = findActiveMember(memberId);
+        return MyProfileResponse.of(member, memberPositionRepository.findAllByMemberIdOrderByPriorityAsc(memberId));
     }
 
     /**

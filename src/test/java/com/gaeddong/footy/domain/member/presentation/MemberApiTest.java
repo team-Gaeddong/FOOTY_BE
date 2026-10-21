@@ -4,7 +4,10 @@ import com.gaeddong.footy.domain.auth.domain.repository.AccessTokenBlacklistRepo
 import com.gaeddong.footy.domain.auth.domain.repository.LoginCodeRepository;
 import com.gaeddong.footy.domain.auth.domain.repository.RefreshTokenRepository;
 import com.gaeddong.footy.domain.member.domain.Member;
+import com.gaeddong.footy.domain.member.domain.MemberPosition;
+import com.gaeddong.footy.domain.member.domain.Position;
 import com.gaeddong.footy.domain.member.domain.Provider;
+import com.gaeddong.footy.domain.member.domain.repository.MemberPositionRepository;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.global.security.jwt.JwtProvider;
 import org.junit.jupiter.api.Test;
@@ -15,6 +18,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 온보딩(회원가입)·탈퇴 API와 온보딩 전 접근 차단을 보안 필터·예외 처리기와 함께 확인한다. Redis 저장소는 목으로 대신한다.
+ * 온보딩(회원가입)·탈퇴·내 프로필 조회 API와 온보딩 전 접근 차단을 보안 필터·예외 처리기와 함께 확인한다. Redis 저장소는 목으로 대신한다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -44,6 +49,9 @@ class MemberApiTest {
     @Autowired
     private MemberRepository memberRepository;
 
+    @Autowired
+    private MemberPositionRepository memberPositionRepository;
+
     @MockitoBean
     private LoginCodeRepository loginCodeRepository;
 
@@ -58,6 +66,14 @@ class MemberApiTest {
                 .email("player@gmail.com")
                 .provider(Provider.GOOGLE)
                 .providerId("google-sub-1")
+                .build());
+    }
+
+    private void savePosition(Member member, Position position, int priority) {
+        memberPositionRepository.save(MemberPosition.builder()
+                .member(member)
+                .position(position)
+                .priority(priority)
                 .build());
     }
 
@@ -152,6 +168,51 @@ class MemberApiTest {
         mockMvc.perform(get("/no-such-path").header("Authorization", bearer(member)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("GLOBAL_404_1"));
+    }
+
+    @Test
+    void 내_프로필을_조회한다() throws Exception {
+        Member member = saveMember();
+        member.completeOnboarding("효오");
+        savePosition(member, Position.MF, 2);
+        savePosition(member, Position.FW, 1);
+
+        mockMvc.perform(get("/members/me").header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.memberId").value(member.getId()))
+                .andExpect(jsonPath("$.email").value("player@gmail.com"))
+                .andExpect(jsonPath("$.nickname").value("효오"))
+                .andExpect(jsonPath("$.onboarded").value(true))
+                .andExpect(jsonPath("$.positions[0].position").value("FW"))
+                .andExpect(jsonPath("$.positions[1].position").value("MF"))
+                .andExpect(jsonPath("$.positions[1].priority").value(2));
+    }
+
+    @Test
+    void 온보딩_전에는_프로필을_조회할_수_없다() throws Exception {
+        Member member = saveMember();
+
+        mockMvc.perform(get("/members/me").header("Authorization", bearer(member)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MEMBER_403_1"));
+    }
+
+    @Test
+    void 탈퇴한_회원이_프로필을_조회하면_404() throws Exception {
+        Member member = saveMember();
+        member.completeOnboarding("효오");
+        member.withdraw(LocalDateTime.now());
+
+        mockMvc.perform(get("/members/me").header("Authorization", bearer(member)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("MEMBER_404_1"));
+    }
+
+    @Test
+    void 토큰_없이_프로필을_조회하면_401() throws Exception {
+        mockMvc.perform(get("/members/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("GLOBAL_401_1"));
     }
 
     @Test
