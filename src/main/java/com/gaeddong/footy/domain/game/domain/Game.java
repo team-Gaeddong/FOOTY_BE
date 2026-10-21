@@ -18,7 +18,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/** docs/erd/footy_erd.sql의 game 테이블과 일치하는 경기 엔티티다. */
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
