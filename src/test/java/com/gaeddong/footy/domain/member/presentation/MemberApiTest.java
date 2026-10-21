@@ -17,12 +17,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 온보딩(회원가입) API를 보안 필터·예외 처리기와 함께 확인한다. Redis 저장소는 목으로 대신한다.
+ * 온보딩(회원가입) API와 온보딩 전 접근 차단을 보안 필터·예외 처리기와 함께 확인한다. Redis 저장소는 목으로 대신한다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -118,5 +120,33 @@ class MemberApiTest {
                         .content("{\"nickname\":\"다른닉네임\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("MEMBER_409_1"));
+    }
+
+    @Test
+    void 온보딩_전_회원은_허용된_API_외에는_403() throws Exception {
+        Member member = saveMember();
+
+        // 컨트롤러까지 갔다면 404가 나온다. 필터에서 먼저 막혀야 한다.
+        mockMvc.perform(get("/no-such-path").header("Authorization", bearer(member)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MEMBER_403_1"));
+    }
+
+    @Test
+    void 온보딩_전에도_로그아웃할_수_있다() throws Exception {
+        Member member = saveMember();
+
+        mockMvc.perform(post("/auth/logout").header("Authorization", bearer(member)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void 온보딩한_회원은_막지_않는다() throws Exception {
+        Member member = saveMember();
+        member.completeOnboarding("태균");
+
+        mockMvc.perform(get("/no-such-path").header("Authorization", bearer(member)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GLOBAL_404_1"));
     }
 }
