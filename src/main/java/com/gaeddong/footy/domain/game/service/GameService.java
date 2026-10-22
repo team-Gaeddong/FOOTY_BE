@@ -6,6 +6,9 @@ import com.gaeddong.footy.domain.member.domain.Member;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.global.error.FootyException;
 import com.gaeddong.footy.global.error.GlobalErrorCode;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,5 +33,15 @@ public class GameService {
 
         Game game = Game.create(host, title, playDate, location, maxPlayers, teamCount, LocalDateTime.now());
         return gameRepository.save(game);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Game> list(int page, int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new FootyException(GlobalErrorCode.INVALID_INPUT);
+        }
+
+        Sort sort = Sort.by(Sort.Direction.ASC, "playDate", "id");
+        return gameRepository.findByDeletedFalse(PageRequest.of(page, size, sort));
     }
 }
