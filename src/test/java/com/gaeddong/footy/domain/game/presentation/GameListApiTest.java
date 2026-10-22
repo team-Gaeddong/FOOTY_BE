@@ -83,6 +83,20 @@ class GameListApiTest {
     }
 
     @Test
+    void 경기가_없으면_빈_목록을_반환한다() throws Exception {
+        Member host = saveHost();
+
+        mockMvc.perform(get("/games")
+                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(host.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.games.length()").value(0))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.totalPages").value(0));
+    }
+
+    @Test
     void 잘못된_페이지_값은_400이다() throws Exception {
         Member host = saveHost();
         String token = jwtProvider.createAccessToken(host.getId());
