@@ -17,7 +17,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class OAuth2LoginFailureHandler implements AuthenticationFailureHandler {
 
-    private static final String LOGIN_FAILED = "login_failed";
+    static final String LOGIN_FAILED = "login_failed";
 
     private final AuthProperties authProperties;
 
