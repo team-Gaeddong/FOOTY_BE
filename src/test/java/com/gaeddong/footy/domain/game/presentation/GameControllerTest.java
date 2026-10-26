@@ -38,7 +38,7 @@ class GameControllerTest {
         given(currentMemberIdProvider.currentMemberId()).willReturn(1L);
         given(gameFacade.create(eq(1L), any())).willReturn(new CreateGameResponse(
                 10L, 1L, "일요일 풋살", LocalDateTime.of(2026, 11, 1, 10, 0),
-                "대구 풋살장", 12, 2, GameStatus.RECRUITING, false,
+                "대구 풋살장", 12, 2, GameStatus.RECRUITING,
                 LocalDateTime.of(2026, 10, 21, 14, 30)
         ));
 
@@ -49,7 +49,7 @@ class GameControllerTest {
                 .andExpect(jsonPath("$.id").value(10))
                 .andExpect(jsonPath("$.hostId").value(1))
                 .andExpect(jsonPath("$.status").value("RECRUITING"))
-                .andExpect(jsonPath("$.isDeleted").value(false));
+                .andExpect(jsonPath("$.isDeleted").doesNotExist());
     }
 
     @Test
