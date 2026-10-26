@@ -1,6 +1,8 @@
 package com.gaeddong.footy.domain.member.service;
 
 import com.gaeddong.footy.domain.member.domain.Member;
+import com.gaeddong.footy.domain.member.domain.MemberPosition;
+import com.gaeddong.footy.domain.member.domain.Position;
 import com.gaeddong.footy.domain.member.domain.Provider;
 import com.gaeddong.footy.domain.member.domain.repository.MemberPositionRepository;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
@@ -14,12 +16,17 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -29,7 +36,8 @@ class MemberServiceTest {
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 10, 21, 12, 0);
 
     private final MemberRepository memberRepository = mock(MemberRepository.class);
-    private final MemberService memberService = new MemberService(memberRepository, mock(MemberPositionRepository.class),
+    private final MemberPositionRepository memberPositionRepository = mock(MemberPositionRepository.class);
+    private final MemberService memberService = new MemberService(memberRepository, memberPositionRepository,
             Clock.fixed(NOW.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()));
 
     private static Member newMember() {
@@ -134,5 +142,41 @@ class MemberServiceTest {
         assertThatThrownBy(() -> memberService.withdraw(1L))
                 .isInstanceOf(FootyException.class)
                 .extracting("errorCode").isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND);
+    }
+
+    @Test
+    void 선호_포지션을_순서대로_우선순위를_붙여_교체한다() {
+        Member member = newMember();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+
+        memberService.updatePositions(1L, List.of(Position.FW, Position.MF));
+
+        var order = inOrder(memberPositionRepository);
+        order.verify(memberPositionRepository).deleteAllByMemberId(1L);
+        order.verify(memberPositionRepository).saveAll(argThat((List<MemberPosition> saved) ->
+                saved.size() == 2
+                        && saved.get(0).getMember() == member
+                        && saved.get(0).getPosition() == Position.FW && saved.get(0).getPriority() == 1
+                        && saved.get(1).getPosition() == Position.MF && saved.get(1).getPriority() == 2));
+    }
+
+    @Test
+    void 포지션_목록이_잘못되면_400이고_저장하지_않는다() {
+        assertThatThrownBy(() -> memberService.updatePositions(1L, List.of(Position.FW, Position.FW)))
+                .isInstanceOf(FootyException.class)
+                .extracting("errorCode").isEqualTo(MemberErrorCode.INVALID_POSITIONS);
+        verify(memberRepository, never()).findById(any());
+        verify(memberPositionRepository, never()).deleteAllByMemberId(anyLong());
+    }
+
+    @Test
+    void 탈퇴한_회원은_포지션을_바꿀_수_없다() {
+        Member member = newMember();
+        member.withdraw(NOW);
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+
+        assertThatThrownBy(() -> memberService.updatePositions(1L, List.of(Position.GK)))
+                .extracting("errorCode").isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND);
+        verify(memberPositionRepository, never()).saveAll(anyList());
     }
 }

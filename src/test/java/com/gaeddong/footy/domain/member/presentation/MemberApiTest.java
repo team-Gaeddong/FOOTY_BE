@@ -29,6 +29,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -236,5 +237,69 @@ class MemberApiTest {
         mockMvc.perform(delete("/members/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("GLOBAL_401_1"));
+    }
+
+    private Member saveOnboardedMember() {
+        Member member = saveMember();
+        member.completeOnboarding("태균");
+        return member;
+    }
+
+    @Test
+    void 선호_포지션을_교체하면_204이고_프로필에_순서대로_나온다() throws Exception {
+        Member member = saveOnboardedMember();
+        savePosition(member, Position.GK, 1);
+
+        mockMvc.perform(put("/members/me/positions")
+                        .header("Authorization", bearer(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"positions\":[\"FW\",\"MF\"]}"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/members/me").header("Authorization", bearer(member)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.positions.length()").value(2))
+                .andExpect(jsonPath("$.positions[0].position").value("FW"))
+                .andExpect(jsonPath("$.positions[0].priority").value(1))
+                .andExpect(jsonPath("$.positions[1].position").value("MF"))
+                .andExpect(jsonPath("$.positions[1].priority").value(2));
+    }
+
+    @Test
+    void 중복되거나_비어_있는_포지션은_400() throws Exception {
+        Member member = saveOnboardedMember();
+
+        for (String body : new String[]{"{\"positions\":[\"FW\",\"FW\"]}", "{\"positions\":[]}", "{}"}) {
+            mockMvc.perform(put("/members/me/positions")
+                            .header("Authorization", bearer(member))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("MEMBER_400_2"));
+        }
+    }
+
+    @Test
+    void 없는_포지션_값은_400() throws Exception {
+        Member member = saveOnboardedMember();
+
+        mockMvc.perform(put("/members/me/positions")
+                        .header("Authorization", bearer(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"positions\":[\"ST\"]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("GLOBAL_400_1"));
+    }
+
+    @Test
+    void 온보딩_전에는_선호_포지션을_바꿀_수_없다() throws Exception {
+        Member member = saveMember();
+
+        mockMvc.perform(put("/members/me/positions")
+                        .header("Authorization", bearer(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"positions\":[\"FW\"]}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("MEMBER_403_1"));
     }
 }
