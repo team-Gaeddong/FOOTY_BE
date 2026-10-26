@@ -6,6 +6,8 @@ import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
 import com.gaeddong.footy.domain.member.domain.Member;
 import com.gaeddong.footy.domain.member.domain.Provider;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
+import com.gaeddong.footy.global.error.FootyException;
+import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,7 +20,10 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -65,5 +70,32 @@ class GameServiceTest {
         assertThat(saved.getStatus()).isEqualTo(GameStatus.RECRUITING);
         assertThat(saved.isDeleted()).isFalse();
         assertThat(saved.getCreatedAt()).isNotNull();
+    }
+
+    @Test
+    void 없는_회원은_경기를_만들_수_없다() {
+        when(memberRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> gameService.create(1L, "일요일 풋살", LocalDateTime.of(2026, 11, 1, 10, 0),
+                "대구 풋살장", 12, 2))
+                .isInstanceOf(FootyException.class)
+                .extracting("errorCode").isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND);
+        verify(gameRepository, never()).save(any());
+    }
+
+    @Test
+    void 탈퇴한_회원은_경기를_만들_수_없다() {
+        Member withdrawn = Member.builder()
+                .email("host@example.com")
+                .provider(Provider.GOOGLE)
+                .providerId("google-sub")
+                .build();
+        withdrawn.withdraw(LocalDateTime.of(2026, 10, 20, 12, 0));
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(withdrawn));
+
+        assertThatThrownBy(() -> gameService.create(1L, "일요일 풋살", LocalDateTime.of(2026, 11, 1, 10, 0),
+                "대구 풋살장", 12, 2))
+                .extracting("errorCode").isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND);
+        verify(gameRepository, never()).save(any());
     }
 }
