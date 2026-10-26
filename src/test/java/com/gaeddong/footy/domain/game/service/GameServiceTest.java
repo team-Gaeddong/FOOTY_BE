@@ -2,10 +2,12 @@ package com.gaeddong.footy.domain.game.service;
 
 import com.gaeddong.footy.domain.game.domain.Game;
 import com.gaeddong.footy.domain.game.domain.GameStatus;
+import com.gaeddong.footy.domain.game.domain.repository.GamePlayerRepository;
 import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
 import com.gaeddong.footy.domain.game.exception.GameErrorCode;
 import com.gaeddong.footy.domain.member.domain.Member;
 import com.gaeddong.footy.domain.member.domain.Provider;
+import com.gaeddong.footy.domain.member.domain.repository.MemberPositionRepository;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.global.error.FootyException;
 import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
@@ -43,11 +45,21 @@ class GameServiceTest {
     @Mock
     private MemberRepository memberRepository;
 
+    @Mock
+    private GamePlayerRepository gamePlayerRepository;
+
+    @Mock
+    private MemberPositionRepository memberPositionRepository;
+
+    @Mock
+    private PlayerPositionService playerPositionService;
+
     private GameService gameService;
 
     @BeforeEach
     void setUp() {
-        gameService = new GameService(gameRepository, memberRepository, CLOCK);
+        gameService = new GameService(gameRepository, gamePlayerRepository, memberRepository, memberPositionRepository,
+                playerPositionService, CLOCK);
     }
 
     @Test

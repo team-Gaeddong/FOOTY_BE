@@ -1,9 +1,12 @@
 package com.gaeddong.footy.domain.game.service;
 
 import com.gaeddong.footy.domain.game.domain.Game;
+import com.gaeddong.footy.domain.game.domain.GamePlayer;
+import com.gaeddong.footy.domain.game.domain.repository.GamePlayerRepository;
 import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
 import com.gaeddong.footy.domain.game.exception.GameErrorCode;
 import com.gaeddong.footy.domain.member.domain.Member;
+import com.gaeddong.footy.domain.member.domain.repository.MemberPositionRepository;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
 import com.gaeddong.footy.global.error.FootyException;
@@ -25,12 +28,20 @@ public class GameService {
     private static final int MIN_TEAM_COUNT = 2;
 
     private final GameRepository gameRepository;
+    private final GamePlayerRepository gamePlayerRepository;
     private final MemberRepository memberRepository;
+    private final MemberPositionRepository memberPositionRepository;
+    private final PlayerPositionService playerPositionService;
     private final Clock clock;
 
-    public GameService(GameRepository gameRepository, MemberRepository memberRepository, Clock clock) {
+    public GameService(GameRepository gameRepository, GamePlayerRepository gamePlayerRepository,
+                       MemberRepository memberRepository, MemberPositionRepository memberPositionRepository,
+                       PlayerPositionService playerPositionService, Clock clock) {
         this.gameRepository = gameRepository;
+        this.gamePlayerRepository = gamePlayerRepository;
         this.memberRepository = memberRepository;
+        this.memberPositionRepository = memberPositionRepository;
+        this.playerPositionService = playerPositionService;
         this.clock = clock;
     }
 
@@ -44,8 +55,9 @@ public class GameService {
                 .filter(found -> !found.isDeleted())
                 .orElseThrow(() -> new FootyException(MemberErrorCode.MEMBER_NOT_FOUND));
 
-        Game game = Game.create(host, title, playDate, location, maxPlayers, teamCount, now);
-        return gameRepository.save(game);
+        Game game = gameRepository.save(Game.create(host, title, playDate, location, maxPlayers, teamCount, now));
+        joinHost(game, host);
+        return game;
     }
 
     @Transactional(readOnly = true)
@@ -56,6 +68,15 @@ public class GameService {
 
         Sort sort = Sort.by(Sort.Direction.ASC, "playDate", "id");
         return gameRepository.findByDeletedFalse(PageRequest.of(page, size, sort));
+    }
+
+    /**
+     * 파티장을 참가 선수로 추가하고 선호 포지션을 경기별 포지션으로 복사한다(D-13, D-14).
+     */
+    private void joinHost(Game game, Member host) {
+        GamePlayer hostPlayer = gamePlayerRepository.save(new GamePlayer(game, host, host.getNickname()));
+        playerPositionService.copyMemberPositions(hostPlayer,
+                memberPositionRepository.findAllByMemberIdOrderByPriorityAsc(host.getId()));
     }
 
     /**
