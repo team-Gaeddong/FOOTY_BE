@@ -11,6 +11,7 @@ import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
 import com.gaeddong.footy.global.error.FootyException;
 import com.gaeddong.footy.global.error.GlobalErrorCode;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -21,6 +22,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Service
+@RequiredArgsConstructor
 public class GameService {
 
     private static final int MIN_PLAYERS = 2;
@@ -34,17 +36,6 @@ public class GameService {
     private final PlayerPositionService playerPositionService;
     private final Clock clock;
 
-    public GameService(GameRepository gameRepository, GamePlayerRepository gamePlayerRepository,
-                       MemberRepository memberRepository, MemberPositionRepository memberPositionRepository,
-                       PlayerPositionService playerPositionService, Clock clock) {
-        this.gameRepository = gameRepository;
-        this.gamePlayerRepository = gamePlayerRepository;
-        this.memberRepository = memberRepository;
-        this.memberPositionRepository = memberPositionRepository;
-        this.playerPositionService = playerPositionService;
-        this.clock = clock;
-    }
-
     @Transactional
     public Game create(Long hostId, String title, LocalDateTime playDate, String location,
                        int maxPlayers, int teamCount) {
@@ -56,7 +47,7 @@ public class GameService {
                 .orElseThrow(() -> new FootyException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         Game game = gameRepository.save(Game.create(host, title, playDate, location, maxPlayers, teamCount, now));
-        joinHost(game, host);
+        joinHost(game, host, now);
         return game;
     }
 
@@ -73,8 +64,8 @@ public class GameService {
     /**
      * 파티장을 참가 선수로 추가하고 선호 포지션을 경기별 포지션으로 복사한다(D-13, D-14).
      */
-    private void joinHost(Game game, Member host) {
-        GamePlayer hostPlayer = gamePlayerRepository.save(new GamePlayer(game, host, host.getNickname()));
+    private void joinHost(Game game, Member host, LocalDateTime joinedAt) {
+        GamePlayer hostPlayer = gamePlayerRepository.save(new GamePlayer(game, host, host.getNickname(), joinedAt));
         playerPositionService.copyMemberPositions(hostPlayer,
                 memberPositionRepository.findAllByMemberIdOrderByPriorityAsc(host.getId()));
     }

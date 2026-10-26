@@ -7,18 +7,15 @@ import com.gaeddong.footy.domain.game.presentation.dto.ListGamesResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
 import com.gaeddong.footy.domain.game.service.GameService;
 import com.gaeddong.footy.domain.game.service.PlayerPositionService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class GameFacade {
 
     private final GameService gameService;
     private final PlayerPositionService playerPositionService;
-
-    public GameFacade(GameService gameService, PlayerPositionService playerPositionService) {
-        this.gameService = gameService;
-        this.playerPositionService = playerPositionService;
-    }
 
     public CreateGameResponse create(Long hostId, CreateGameRequest request) {
         Game game = gameService.create(
