@@ -4,6 +4,7 @@ import com.gaeddong.footy.domain.game.domain.Game;
 import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
 import com.gaeddong.footy.domain.member.domain.Member;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
+import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
 import com.gaeddong.footy.global.error.FootyException;
 import com.gaeddong.footy.global.error.GlobalErrorCode;
 import org.springframework.data.domain.Page;
@@ -28,8 +29,10 @@ public class GameService {
     @Transactional
     public Game create(Long hostId, String title, LocalDateTime playDate, String location,
                        int maxPlayers, int teamCount) {
+        // 탈퇴한 회원은 없는 회원으로 본다(D-16)
         Member host = memberRepository.findById(hostId)
-                .orElseThrow(() -> new FootyException(GlobalErrorCode.UNAUTHORIZED));
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new FootyException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         Game game = Game.create(host, title, playDate, location, maxPlayers, teamCount, LocalDateTime.now());
         return gameRepository.save(game);
