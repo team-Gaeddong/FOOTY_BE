@@ -1,11 +1,14 @@
 package com.gaeddong.footy.domain.game.service;
 
 import com.gaeddong.footy.domain.game.domain.Game;
+import com.gaeddong.footy.domain.game.domain.GamePlayer;
 import com.gaeddong.footy.domain.game.domain.GameStatus;
 import com.gaeddong.footy.domain.game.domain.repository.GamePlayerRepository;
 import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
 import com.gaeddong.footy.domain.game.exception.GameErrorCode;
 import com.gaeddong.footy.domain.member.domain.Member;
+import com.gaeddong.footy.domain.member.domain.MemberPosition;
+import com.gaeddong.footy.domain.member.domain.Position;
 import com.gaeddong.footy.domain.member.domain.Provider;
 import com.gaeddong.footy.domain.member.domain.repository.MemberPositionRepository;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
@@ -24,6 +27,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -140,5 +144,32 @@ class GameServiceTest {
                 .extracting("errorCode").isEqualTo(GameErrorCode.PAST_PLAY_DATE);
         assertThatThrownBy(() -> gameService.create(1L, "풋살", NOW.minusDays(1), "풋살장", 10, 2))
                 .extracting("errorCode").isEqualTo(GameErrorCode.PAST_PLAY_DATE);
+    }
+
+    @Test
+    void 파티장을_닉네임으로_참가시키고_선호_포지션을_복사한다() {
+        Member host = Member.builder()
+                .email("host@example.com")
+                .provider(Provider.GOOGLE)
+                .providerId("google-sub")
+                .build();
+        host.completeOnboarding("파티장");
+        ReflectionTestUtils.setField(host, "id", 1L);
+        List<MemberPosition> hostPositions = List.of(
+                MemberPosition.builder().member(host).position(Position.FW).priority(1).build());
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(host));
+        when(gameRepository.save(any(Game.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(gamePlayerRepository.save(any(GamePlayer.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(memberPositionRepository.findAllByMemberIdOrderByPriorityAsc(1L)).thenReturn(hostPositions);
+
+        Game game = gameService.create(1L, "풋살", NOW.plusDays(1), "풋살장", 10, 2);
+
+        ArgumentCaptor<GamePlayer> captor = ArgumentCaptor.forClass(GamePlayer.class);
+        verify(gamePlayerRepository).save(captor.capture());
+        GamePlayer hostPlayer = captor.getValue();
+        assertThat(hostPlayer.getGame()).isSameAs(game);
+        assertThat(hostPlayer.getMember()).isSameAs(host);
+        assertThat(hostPlayer.getName()).isEqualTo("파티장");
+        verify(playerPositionService).copyMemberPositions(hostPlayer, hostPositions);
     }
 }
