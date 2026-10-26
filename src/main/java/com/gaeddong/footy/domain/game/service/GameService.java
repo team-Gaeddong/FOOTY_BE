@@ -2,6 +2,7 @@ package com.gaeddong.footy.domain.game.service;
 
 import com.gaeddong.footy.domain.game.domain.Game;
 import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
+import com.gaeddong.footy.domain.game.exception.GameErrorCode;
 import com.gaeddong.footy.domain.member.domain.Member;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
@@ -13,28 +14,37 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Service
 public class GameService {
 
+    private static final int MIN_PLAYERS = 2;
+    private static final int MAX_PLAYERS = 30;
+    private static final int MIN_TEAM_COUNT = 2;
+
     private final GameRepository gameRepository;
     private final MemberRepository memberRepository;
+    private final Clock clock;
 
-    public GameService(GameRepository gameRepository, MemberRepository memberRepository) {
+    public GameService(GameRepository gameRepository, MemberRepository memberRepository, Clock clock) {
         this.gameRepository = gameRepository;
         this.memberRepository = memberRepository;
+        this.clock = clock;
     }
 
     @Transactional
     public Game create(Long hostId, String title, LocalDateTime playDate, String location,
                        int maxPlayers, int teamCount) {
+        LocalDateTime now = LocalDateTime.now(clock);
+        validate(playDate, maxPlayers, teamCount, now);
         // 탈퇴한 회원은 없는 회원으로 본다(D-16)
         Member host = memberRepository.findById(hostId)
                 .filter(found -> !found.isDeleted())
                 .orElseThrow(() -> new FootyException(MemberErrorCode.MEMBER_NOT_FOUND));
 
-        Game game = Game.create(host, title, playDate, location, maxPlayers, teamCount, LocalDateTime.now());
+        Game game = Game.create(host, title, playDate, location, maxPlayers, teamCount, now);
         return gameRepository.save(game);
     }
 
@@ -46,5 +56,20 @@ public class GameService {
 
         Sort sort = Sort.by(Sort.Direction.ASC, "playDate", "id");
         return gameRepository.findByDeletedFalse(PageRequest.of(page, size, sort));
+    }
+
+    /**
+     * 경기 생성 정책(D-14): 최대 인원 2~30, 팀 수 2 이상이고 최대 인원 이하, 과거 일시 불가.
+     */
+    private void validate(LocalDateTime playDate, int maxPlayers, int teamCount, LocalDateTime now) {
+        if (maxPlayers < MIN_PLAYERS || maxPlayers > MAX_PLAYERS) {
+            throw new FootyException(GameErrorCode.INVALID_MAX_PLAYERS);
+        }
+        if (teamCount < MIN_TEAM_COUNT || teamCount > maxPlayers) {
+            throw new FootyException(GameErrorCode.INVALID_TEAM_COUNT);
+        }
+        if (!playDate.isAfter(now)) {
+            throw new FootyException(GameErrorCode.PAST_PLAY_DATE);
+        }
     }
 }

@@ -16,7 +16,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,6 +31,9 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class GameServiceTest {
 
+    private static final LocalDateTime NOW = LocalDateTime.of(2026, 10, 26, 12, 0);
+    private static final Clock CLOCK = Clock.fixed(NOW.atZone(ZoneId.of("Asia/Seoul")).toInstant(), ZoneId.of("Asia/Seoul"));
+
     @Mock
     private GameRepository gameRepository;
 
@@ -39,7 +44,7 @@ class GameServiceTest {
 
     @BeforeEach
     void setUp() {
-        gameService = new GameService(gameRepository, memberRepository);
+        gameService = new GameService(gameRepository, memberRepository, CLOCK);
     }
 
     @Test
