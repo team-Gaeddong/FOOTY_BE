@@ -8,12 +8,14 @@ import com.gaeddong.footy.domain.game.domain.repository.GamePlayerRepository;
 import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
 import com.gaeddong.footy.domain.game.domain.repository.PlayerPositionRepository;
 import com.gaeddong.footy.domain.game.exception.GameErrorCode;
+import com.gaeddong.footy.domain.member.domain.MemberPosition;
 import com.gaeddong.footy.domain.member.domain.Position;
 import com.gaeddong.footy.domain.member.domain.PositionPriorities;
 import com.gaeddong.footy.global.error.FootyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -50,6 +52,22 @@ public class PlayerPositionService {
 
         playerPositionRepository.deleteAllByGamePlayerId(player.getId());
         playerPositionRepository.saveAll(toPlayerPositions(player, priorities));
+    }
+
+    /**
+     * 매치 참여 때 회원 선호 포지션을 경기별 포지션으로 복사한다(D-13). 선호 포지션이 없으면 아무것도 하지 않는다.
+     * 호출하는 쪽(매치 참여)의 트랜잭션에 참여한다.
+     */
+    @Transactional
+    public void copyMemberPositions(GamePlayer player, List<MemberPosition> memberPositions) {
+        if (memberPositions.isEmpty()) {
+            return;
+        }
+        List<Position> positions = memberPositions.stream()
+                .sorted(Comparator.comparingInt(MemberPosition::getPriority))
+                .map(MemberPosition::getPosition)
+                .toList();
+        playerPositionRepository.saveAll(toPlayerPositions(player, new PositionPriorities(positions)));
     }
 
     private List<PlayerPosition> toPlayerPositions(GamePlayer player, PositionPriorities priorities) {
