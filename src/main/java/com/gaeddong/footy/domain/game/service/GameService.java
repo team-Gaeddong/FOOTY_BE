@@ -56,7 +56,7 @@ public class GameService {
                 .orElseThrow(() -> new FootyException(MemberErrorCode.MEMBER_NOT_FOUND));
 
         Game game = gameRepository.save(Game.create(host, title, playDate, location, maxPlayers, teamCount, now));
-        joinHost(game, host);
+        joinHost(game, host, now);
         return game;
     }
 
@@ -73,8 +73,8 @@ public class GameService {
     /**
      * 파티장을 참가 선수로 추가하고 선호 포지션을 경기별 포지션으로 복사한다(D-13, D-14).
      */
-    private void joinHost(Game game, Member host) {
-        GamePlayer hostPlayer = gamePlayerRepository.save(new GamePlayer(game, host, host.getNickname()));
+    private void joinHost(Game game, Member host, LocalDateTime joinedAt) {
+        GamePlayer hostPlayer = gamePlayerRepository.save(new GamePlayer(game, host, host.getNickname(), joinedAt));
         playerPositionService.copyMemberPositions(hostPlayer,
                 memberPositionRepository.findAllByMemberIdOrderByPriorityAsc(host.getId()));
     }

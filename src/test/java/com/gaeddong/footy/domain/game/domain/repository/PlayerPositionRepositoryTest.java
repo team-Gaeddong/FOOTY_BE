@@ -55,7 +55,7 @@ class PlayerPositionRepositoryTest {
 
     @Test
     void 선수의_포지션을_우선순위_순서로_조회한다() {
-        GamePlayer player = gamePlayerRepository.save(new GamePlayer(saveGame(), null, "비회원"));
+        GamePlayer player = gamePlayerRepository.save(new GamePlayer(saveGame(), null, "비회원", NOW));
         savePosition(player, Position.MF, 2);
         savePosition(player, Position.FW, 1);
 
@@ -69,8 +69,8 @@ class PlayerPositionRepositoryTest {
     @Test
     void 선수의_포지션만_지운다() {
         Game game = saveGame();
-        GamePlayer player = gamePlayerRepository.save(new GamePlayer(game, null, "선수1"));
-        GamePlayer other = gamePlayerRepository.save(new GamePlayer(game, null, "선수2"));
+        GamePlayer player = gamePlayerRepository.save(new GamePlayer(game, null, "선수1", NOW));
+        GamePlayer other = gamePlayerRepository.save(new GamePlayer(game, null, "선수2", NOW));
         savePosition(player, Position.FW, 1);
         savePosition(other, Position.GK, 1);
 
@@ -83,7 +83,7 @@ class PlayerPositionRepositoryTest {
     @Test
     void 경기_참가자는_그_경기_안에서만_찾는다() {
         Game game = saveGame();
-        GamePlayer player = gamePlayerRepository.save(new GamePlayer(game, null, "선수1"));
+        GamePlayer player = gamePlayerRepository.save(new GamePlayer(game, null, "선수1", NOW));
 
         assertThat(gamePlayerRepository.findByIdAndGameId(player.getId(), game.getId())).isPresent();
         assertThat(gamePlayerRepository.findByIdAndGameId(player.getId(), game.getId() + 1)).isEmpty();
