@@ -3,16 +3,19 @@ package com.gaeddong.footy.domain.game.presentation;
 import com.gaeddong.footy.domain.game.domain.GameStatus;
 import com.gaeddong.footy.domain.game.facade.GameFacade;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameResponse;
-import com.gaeddong.footy.global.auth.CurrentMemberIdProvider;
-import com.gaeddong.footy.global.error.FootyException;
-import com.gaeddong.footy.global.error.GlobalErrorCode;
 import com.gaeddong.footy.global.error.GlobalExceptionHandler;
 import org.springframework.http.MediaType;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -26,16 +29,26 @@ class GameControllerTest {
 
     private final GameFacade gameFacade = mock(GameFacade.class);
 
-    private final CurrentMemberIdProvider currentMemberIdProvider = mock(CurrentMemberIdProvider.class);
-
+    // 보안 필터 없이 컨트롤러만 확인한다. 인증 없음(401)은 GameCreateApiTest에서 확인한다.
     private final MockMvc mockMvc = MockMvcBuilders
-            .standaloneSetup(new GameController(gameFacade, currentMemberIdProvider))
+            .standaloneSetup(new GameController(gameFacade))
             .setControllerAdvice(new GlobalExceptionHandler())
+            .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
             .build();
+
+    @BeforeEach
+    void authenticate() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(1L, "access-token", List.of()));
+    }
+
+    @AfterEach
+    void clearAuthentication() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void 인증된_사용자는_경기를_생성한다() throws Exception {
-        given(currentMemberIdProvider.currentMemberId()).willReturn(1L);
         given(gameFacade.create(eq(1L), any())).willReturn(new CreateGameResponse(
                 10L, 1L, "일요일 풋살", LocalDateTime.of(2026, 11, 1, 10, 0),
                 "대구 풋살장", 12, 2, GameStatus.RECRUITING,
@@ -50,18 +63,6 @@ class GameControllerTest {
                 .andExpect(jsonPath("$.hostId").value(1))
                 .andExpect(jsonPath("$.status").value("RECRUITING"))
                 .andExpect(jsonPath("$.isDeleted").doesNotExist());
-    }
-
-    @Test
-    void 미인증_요청은_401을_반환한다() throws Exception {
-        given(currentMemberIdProvider.currentMemberId()).willThrow(new FootyException(GlobalErrorCode.UNAUTHORIZED));
-
-        mockMvc.perform(post("/games")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(validRequest()))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("GLOBAL_401_1"))
-                .andExpect(jsonPath("$.message").value("인증이 필요합니다."));
     }
 
     @Test

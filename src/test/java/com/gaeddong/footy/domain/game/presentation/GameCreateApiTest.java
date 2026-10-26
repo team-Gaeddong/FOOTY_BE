@@ -135,4 +135,14 @@ class GameCreateApiTest {
                 .andExpect(jsonPath("$.code").value("GAME_400_3"));
         assertThat(gamePlayerRepository.count()).isZero();
     }
+
+    @Test
+    void 토큰_없이_경기를_만들면_401() throws Exception {
+        mockMvc.perform(post("/games")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body(LocalDateTime.now().plusDays(3), 12, null)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("GLOBAL_401_1"))
+                .andExpect(jsonPath("$.message").value("인증이 필요합니다."));
+    }
 }
