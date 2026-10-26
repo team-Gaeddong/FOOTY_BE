@@ -11,6 +11,7 @@ import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
 import com.gaeddong.footy.global.error.FootyException;
 import com.gaeddong.footy.global.error.GlobalErrorCode;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -21,6 +22,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 
 @Service
+@RequiredArgsConstructor
 public class GameService {
 
     private static final int MIN_PLAYERS = 2;
@@ -33,17 +35,6 @@ public class GameService {
     private final MemberPositionRepository memberPositionRepository;
     private final PlayerPositionService playerPositionService;
     private final Clock clock;
-
-    public GameService(GameRepository gameRepository, GamePlayerRepository gamePlayerRepository,
-                       MemberRepository memberRepository, MemberPositionRepository memberPositionRepository,
-                       PlayerPositionService playerPositionService, Clock clock) {
-        this.gameRepository = gameRepository;
-        this.gamePlayerRepository = gamePlayerRepository;
-        this.memberRepository = memberRepository;
-        this.memberPositionRepository = memberPositionRepository;
-        this.playerPositionService = playerPositionService;
-        this.clock = clock;
-    }
 
     @Transactional
     public Game create(Long hostId, String title, LocalDateTime playDate, String location,
