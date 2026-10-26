@@ -3,6 +3,7 @@ package com.gaeddong.footy.domain.game.service;
 import com.gaeddong.footy.domain.game.domain.Game;
 import com.gaeddong.footy.domain.game.domain.GameStatus;
 import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
+import com.gaeddong.footy.domain.game.exception.GameErrorCode;
 import com.gaeddong.footy.domain.member.domain.Member;
 import com.gaeddong.footy.domain.member.domain.Provider;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
@@ -11,6 +12,8 @@ import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -102,5 +105,28 @@ class GameServiceTest {
                 "대구 풋살장", 12, 2))
                 .extracting("errorCode").isEqualTo(MemberErrorCode.MEMBER_NOT_FOUND);
         verify(gameRepository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"1,2", "31,2"})
+    void 최대_인원은_2명에서_30명이다(int maxPlayers, int teamCount) {
+        assertThatThrownBy(() -> gameService.create(1L, "풋살", NOW.plusDays(1), "풋살장", maxPlayers, teamCount))
+                .extracting("errorCode").isEqualTo(GameErrorCode.INVALID_MAX_PLAYERS);
+        verify(memberRepository, never()).findById(any());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"10,1", "10,0", "10,-1", "10,11"})
+    void 팀_수는_2_이상이고_최대_인원_이하다(int maxPlayers, int teamCount) {
+        assertThatThrownBy(() -> gameService.create(1L, "풋살", NOW.plusDays(1), "풋살장", maxPlayers, teamCount))
+                .extracting("errorCode").isEqualTo(GameErrorCode.INVALID_TEAM_COUNT);
+    }
+
+    @Test
+    void 지금이거나_지난_일시로는_만들_수_없다() {
+        assertThatThrownBy(() -> gameService.create(1L, "풋살", NOW, "풋살장", 10, 2))
+                .extracting("errorCode").isEqualTo(GameErrorCode.PAST_PLAY_DATE);
+        assertThatThrownBy(() -> gameService.create(1L, "풋살", NOW.minusDays(1), "풋살장", 10, 2))
+                .extracting("errorCode").isEqualTo(GameErrorCode.PAST_PLAY_DATE);
     }
 }
