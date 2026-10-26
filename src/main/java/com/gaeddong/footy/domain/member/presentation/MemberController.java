@@ -3,6 +3,7 @@ package com.gaeddong.footy.domain.member.presentation;
 import com.gaeddong.footy.domain.member.facade.MemberFacade;
 import com.gaeddong.footy.domain.member.presentation.dto.MyProfileResponse;
 import com.gaeddong.footy.domain.member.presentation.dto.request.OnboardingRequest;
+import com.gaeddong.footy.domain.member.presentation.dto.request.UpdatePositionsRequest;
 import com.gaeddong.footy.domain.member.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,6 +29,13 @@ public class MemberController {
     public ResponseEntity<Void> completeOnboarding(Authentication authentication,
                                                    @RequestBody OnboardingRequest request) {
         memberService.completeOnboarding((Long) authentication.getPrincipal(), request.nickname());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/me/positions")
+    public ResponseEntity<Void> updatePositions(Authentication authentication,
+                                                @RequestBody UpdatePositionsRequest request) {
+        memberService.updatePositions((Long) authentication.getPrincipal(), request.positions());
         return ResponseEntity.noContent().build();
     }
 
