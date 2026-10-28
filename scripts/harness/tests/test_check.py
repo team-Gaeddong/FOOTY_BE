@@ -91,6 +91,11 @@ class GateTests(unittest.TestCase):
         self.commit()
         self.gate(1)
 
+    def test_hyphenated_issue_branch_passes(self):
+        self.git("branch", "-m", "feature/30-재경기-생성-api-구현")
+        self.commit()
+        self.gate(0)
+
     def test_invalid_commit_fails(self):
         self.commit("feat :: 검증 추가")
         self.gate(1)

@@ -14,7 +14,6 @@ public record CreateGameResponse(
         int maxPlayers,
         int teamCount,
         GameStatus status,
-        boolean isDeleted,
         LocalDateTime createdAt
 ) {
     public static CreateGameResponse from(Game game) {
@@ -27,7 +26,6 @@ public record CreateGameResponse(
                 game.getMaxPlayers(),
                 game.getTeamCount(),
                 game.getStatus(),
-                game.isDeleted(),
                 game.getCreatedAt()
         );
     }
