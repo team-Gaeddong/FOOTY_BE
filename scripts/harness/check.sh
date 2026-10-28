@@ -106,10 +106,10 @@ if [[ "$mode" == change ]]; then
     fi
   fi
   if [[ -n "$branch" ]]; then
-    if [[ "$branch" =~ ^(feature|hotfix)/[0-9]+_[^[:space:]]+$ ]] && git check-ref-format --branch "$branch" > /dev/null 2>&1; then
+    if [[ "$branch" =~ ^(feature|hotfix)/[0-9]+[-_][^[:space:]]+$ ]] && git check-ref-format --branch "$branch" > /dev/null 2>&1; then
       pass "$branch"
     else
-      fail "'$branch'는 feature/{이슈번호}_{할일} 또는 hotfix/{이슈번호}_{할일} 형식이 아님 (main/develop 변경 검사 금지)"
+      fail "'$branch'는 feature|hotfix/{이슈번호}_{할일} 또는 feature|hotfix/{이슈번호}-{할일} 형식이 아님 (main/develop 변경 검사 금지)"
     fi
   fi
 

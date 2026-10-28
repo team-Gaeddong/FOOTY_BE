@@ -9,9 +9,12 @@ import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
 import com.gaeddong.footy.domain.game.service.GamePlayerService;
 import com.gaeddong.footy.domain.game.service.GameService;
 import com.gaeddong.footy.global.error.FootyException;
+import com.gaeddong.footy.domain.game.presentation.dto.RematchGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
 import com.gaeddong.footy.domain.game.service.GameService;
 import com.gaeddong.footy.domain.game.service.PlayerPositionService;
+import com.gaeddong.footy.domain.game.service.RematchGameService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -19,11 +22,13 @@ import java.util.Map;
 
 @RequiredArgsConstructor
 @Component
+@RequiredArgsConstructor
 public class GameFacade {
 
     private final GameService gameService;
     private final GamePlayerService gamePlayerService;
     private final PlayerPositionService playerPositionService;
+    private final RematchGameService rematchGameService;
 
     public CreateGameResponse create(Long hostId, CreateGameRequest request) {
         Game game = gameService.create(
@@ -49,6 +54,10 @@ public class GameFacade {
             }
         }
         gamePlayerService.updateSkillLevels(memberId, gameId, skillLevels);
+    public CreateGameResponse rematch(Long requesterId, Long sourceGameId, RematchGameRequest request) {
+        return CreateGameResponse.from(rematchGameService.create(requesterId, sourceGameId, request.playDate()));
+    }
+
     public void updatePlayerPositions(Long requesterId, Long gameId, Long gamePlayerId,
                                       UpdatePlayerPositionsRequest request) {
         playerPositionService.updatePositions(requesterId, gameId, gamePlayerId, request.positions());
