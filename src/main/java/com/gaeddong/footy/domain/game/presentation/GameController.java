@@ -3,9 +3,9 @@ package com.gaeddong.footy.domain.game.presentation;
 import com.gaeddong.footy.domain.game.facade.GameFacade;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameResponse;
+import com.gaeddong.footy.domain.game.presentation.dto.JoinGameRequest;
+import com.gaeddong.footy.domain.game.presentation.dto.JoinGameResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamesResponse;
-import com.gaeddong.footy.domain.game.presentation.dto.RegisterPlayerRequest;
-import com.gaeddong.footy.domain.game.presentation.dto.RegisterPlayerResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
 import jakarta.validation.Valid;
@@ -65,12 +65,12 @@ public class GameController {
     }
 
     @PostMapping("/{gameId}/players")
-    public ResponseEntity<RegisterPlayerResponse> registerPlayer(
-            @AuthenticationPrincipal Long requesterId,
+    public ResponseEntity<JoinGameResponse> join(
+            @AuthenticationPrincipal Long memberId,
             @PathVariable Long gameId,
-            @Valid @RequestBody RegisterPlayerRequest request
+            @RequestBody JoinGameRequest request
     ) {
-        RegisterPlayerResponse response = gameFacade.registerPlayer(requesterId, gameId, request);
+        JoinGameResponse response = gameFacade.join(memberId, gameId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }
