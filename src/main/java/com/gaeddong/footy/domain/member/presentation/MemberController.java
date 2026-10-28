@@ -26,26 +26,26 @@ public class MemberController {
     private final MemberFacade memberFacade;
 
     @PatchMapping("/me/onboarding")
-    public ResponseEntity<Void> completeOnboarding(Authentication authentication,
+    public ResponseEntity<Void> completeOnboarding(@AuthenticationPrincipal Long memberId,
                                                    @RequestBody OnboardingRequest request) {
-        memberService.completeOnboarding((Long) authentication.getPrincipal(), request.nickname());
+        memberService.completeOnboarding(memberId, request.nickname());
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/me/positions")
-    public ResponseEntity<Void> updatePositions(Authentication authentication,
+    public ResponseEntity<Void> updatePositions(@AuthenticationPrincipal Long memberId,
                                                 @RequestBody UpdatePositionsRequest request) {
-        memberService.updatePositions((Long) authentication.getPrincipal(), request.positions());
+        memberService.updatePositions(memberId, request.positions());
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/me")
-    public ResponseEntity<Void> withdraw(Authentication authentication) {
-        memberFacade.withdraw((Long) authentication.getPrincipal(), (String) authentication.getCredentials());
+    // 탈퇴하면서 access 토큰도 무효화하므로 credentials(토큰)가 필요하다
+    public ResponseEntity<Void> withdraw(@AuthenticationPrincipal Long memberId, Authentication authentication) {
+        memberFacade.withdraw(memberId, (String) authentication.getCredentials());
         return ResponseEntity.noContent().build();
     }
 
-    // JwtAuthenticationFilter가 회원 ID를 principal로 둔다
     @GetMapping("/me")
     public MyProfileResponse getMyProfile(@AuthenticationPrincipal Long memberId) {
         return memberService.getMyProfile(memberId);

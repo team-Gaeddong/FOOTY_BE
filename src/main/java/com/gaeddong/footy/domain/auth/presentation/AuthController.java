@@ -7,6 +7,7 @@ import com.gaeddong.footy.domain.auth.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,9 +33,10 @@ public class AuthController {
         return authService.reissue(request.refreshToken());
     }
 
+    // 로그아웃하면서 access 토큰을 블랙리스트에 넣으므로 credentials(토큰)가 필요하다
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(Authentication authentication) {
-        authService.logout((Long) authentication.getPrincipal(), (String) authentication.getCredentials());
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal Long memberId, Authentication authentication) {
+        authService.logout(memberId, (String) authentication.getCredentials());
         return ResponseEntity.noContent().build();
     }
 }

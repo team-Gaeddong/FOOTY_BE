@@ -63,22 +63,25 @@ public class AuthService {
     }
 
     /**
-     * refresh 토큰을 회전한다. 저장된 토큰과 다르면(이미 쓴 토큰 등) 거부한다.
+     * refresh 토큰을 회전한다. 저장된 토큰과 비교·교체를 한 번에 해서(Lua) 같은 토큰으로 동시에 요청해도 하나만 통과한다.
+     * 저장된 것과 다르면(이미 쓴 토큰 등) 거부한다.
      */
     @Transactional(readOnly = true)
     public TokenResponse reissue(String refreshToken) {
         requireText(refreshToken);
         Long memberId = jwtProvider.getMemberId(refreshToken, TokenType.REFRESH);
-        boolean matches = refreshTokenRepository.findByMemberId(memberId)
-                .filter(refreshToken::equals)
-                .isPresent();
-        if (!matches) {
-            throw new FootyException(AuthErrorCode.INVALID_REFRESH_TOKEN);
-        }
         Member member = memberRepository.findById(memberId)
                 .filter(found -> !found.isDeleted())
                 .orElseThrow(() -> new FootyException(AuthErrorCode.INVALID_REFRESH_TOKEN));
-        return issueTokens(member);
+
+        String newAccessToken = jwtProvider.createAccessToken(memberId);
+        String newRefreshToken = jwtProvider.createRefreshToken(memberId);
+        boolean rotated = refreshTokenRepository.rotate(memberId, refreshToken, newRefreshToken,
+                jwtProvider.getRefreshTokenExpiration());
+        if (!rotated) {
+            throw new FootyException(AuthErrorCode.INVALID_REFRESH_TOKEN);
+        }
+        return new TokenResponse(newAccessToken, newRefreshToken, member.isOnboarded());
     }
 
     public void logout(Long memberId, String accessToken) {

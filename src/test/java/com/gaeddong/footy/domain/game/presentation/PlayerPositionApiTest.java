@@ -87,7 +87,7 @@ class PlayerPositionApiTest {
     void 파티장이_선수_포지션을_설정하면_204() throws Exception {
         Member host = saveMember("host@example.com", "google-host");
         Game game = saveGame(host);
-        GamePlayer player = gamePlayerRepository.save(new GamePlayer(game, null, "비회원"));
+        GamePlayer player = gamePlayerRepository.save(new GamePlayer(game, null, "비회원", LocalDateTime.now()));
 
         putPositions(host, game.getId(), player.getId(), BODY)
                 .andExpect(status().isNoContent());
@@ -102,7 +102,7 @@ class PlayerPositionApiTest {
         Member host = saveMember("host@example.com", "google-host");
         Member other = saveMember("other@example.com", "google-other");
         Game game = saveGame(host);
-        GamePlayer player = gamePlayerRepository.save(new GamePlayer(game, other, "회원"));
+        GamePlayer player = gamePlayerRepository.save(new GamePlayer(game, other, "회원", LocalDateTime.now()));
 
         putPositions(other, game.getId(), player.getId(), BODY)
                 .andExpect(status().isForbidden())
@@ -114,7 +114,7 @@ class PlayerPositionApiTest {
         Member host = saveMember("host@example.com", "google-host");
         Game game = saveGame(host);
         Game otherGame = saveGame(host);
-        GamePlayer otherPlayer = gamePlayerRepository.save(new GamePlayer(otherGame, null, "비회원"));
+        GamePlayer otherPlayer = gamePlayerRepository.save(new GamePlayer(otherGame, null, "비회원", LocalDateTime.now()));
 
         putPositions(host, game.getId(), otherPlayer.getId(), BODY)
                 .andExpect(status().isNotFound())
@@ -134,7 +134,7 @@ class PlayerPositionApiTest {
     void 포지션_목록이_잘못되면_400() throws Exception {
         Member host = saveMember("host@example.com", "google-host");
         Game game = saveGame(host);
-        GamePlayer player = gamePlayerRepository.save(new GamePlayer(game, null, "비회원"));
+        GamePlayer player = gamePlayerRepository.save(new GamePlayer(game, null, "비회원", LocalDateTime.now()));
 
         putPositions(host, game.getId(), player.getId(), "{\"positions\":[\"FW\",\"FW\"]}")
                 .andExpect(status().isBadRequest())

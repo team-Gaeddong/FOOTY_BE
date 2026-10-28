@@ -128,25 +128,37 @@ class AuthServiceTest {
     @Test
     void 재발급하면_refresh_토큰도_바뀐다() {
         given(jwtProvider.getMemberId("old-refresh", TokenType.REFRESH)).willReturn(1L);
-        given(refreshTokenRepository.findByMemberId(1L)).willReturn(Optional.of("old-refresh"));
         given(memberRepository.findById(1L)).willReturn(Optional.of(member(1L)));
         given(jwtProvider.createAccessToken(1L)).willReturn("new-access");
         given(jwtProvider.createRefreshToken(1L)).willReturn("new-refresh");
+        given(refreshTokenRepository.rotate(1L, "old-refresh", "new-refresh", REFRESH_TTL)).willReturn(true);
 
         TokenResponse response = authService.reissue("old-refresh");
 
-        assertThat(response.refreshToken()).isEqualTo("new-refresh");
-        verify(refreshTokenRepository).save(1L, "new-refresh", REFRESH_TTL);
+        assertThat(response).isEqualTo(new TokenResponse("new-access", "new-refresh", false));
     }
 
     @Test
-    void 저장된_것과_다른_refresh_토큰은_거부한다() {
+    void 저장된_것과_다르거나_이미_쓴_refresh_토큰은_거부한다() {
         given(jwtProvider.getMemberId("stale-refresh", TokenType.REFRESH)).willReturn(1L);
-        given(refreshTokenRepository.findByMemberId(1L)).willReturn(Optional.of("current-refresh"));
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member(1L)));
+        given(jwtProvider.createRefreshToken(1L)).willReturn("new-refresh");
+        given(refreshTokenRepository.rotate(1L, "stale-refresh", "new-refresh", REFRESH_TTL)).willReturn(false);
 
         assertThatThrownBy(() -> authService.reissue("stale-refresh"))
                 .extracting("errorCode").isEqualTo(AuthErrorCode.INVALID_REFRESH_TOKEN);
-        verify(refreshTokenRepository, never()).save(any(), anyString(), any());
+    }
+
+    @Test
+    void 탈퇴한_회원의_refresh_토큰은_회전하지_않고_거부한다() {
+        Member withdrawn = member(1L);
+        withdrawn.withdraw(LocalDateTime.of(2026, 10, 20, 12, 0));
+        given(jwtProvider.getMemberId("refresh", TokenType.REFRESH)).willReturn(1L);
+        given(memberRepository.findById(1L)).willReturn(Optional.of(withdrawn));
+
+        assertThatThrownBy(() -> authService.reissue("refresh"))
+                .extracting("errorCode").isEqualTo(AuthErrorCode.INVALID_REFRESH_TOKEN);
+        verify(refreshTokenRepository, never()).rotate(any(), anyString(), anyString(), any());
     }
 
     @Test

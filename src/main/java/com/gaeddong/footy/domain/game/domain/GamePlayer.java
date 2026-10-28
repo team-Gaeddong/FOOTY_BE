@@ -54,11 +54,12 @@ public class GamePlayer {
     @Column(name = "joined_at", nullable = false)
     private LocalDateTime joinedAt;
 
-    public GamePlayer(Game game, Member member, String name) {
+    // 참여 시각은 호출하는 쪽이 Clock으로 만들어 넘긴다(D-08)
+    public GamePlayer(Game game, Member member, String name, LocalDateTime joinedAt) {
         this.game = game;
         this.member = member;
         this.name = name;
-        this.joinedAt = LocalDateTime.now();
+        this.joinedAt = joinedAt;
     }
 
     public void changeSkillLevel(int skillLevel) {
