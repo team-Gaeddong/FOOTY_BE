@@ -44,9 +44,13 @@ public class GameController {
     }
 
     @PatchMapping("/{gameId}/players/skill-levels")
-    public ResponseEntity<Void> updateSkillLevels(@PathVariable Long gameId,
+    public ResponseEntity<Void> updateSkillLevels(@AuthenticationPrincipal Long memberId,
+                                                  @PathVariable Long gameId,
                                                   @Valid @RequestBody UpdateSkillLevelsRequest request) {
-        gameFacade.updateSkillLevels(currentMemberIdProvider.currentMemberId(), gameId, request);
+        gameFacade.updateSkillLevels(memberId, gameId, request);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{gameId}/players/{gamePlayerId}/positions")
     public ResponseEntity<Void> updatePlayerPositions(
             @AuthenticationPrincipal Long memberId,
