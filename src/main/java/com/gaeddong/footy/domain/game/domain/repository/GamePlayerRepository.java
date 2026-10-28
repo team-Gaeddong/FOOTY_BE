@@ -11,6 +11,8 @@ public interface GamePlayerRepository extends JpaRepository<GamePlayer, Long> {
 
     List<GamePlayer> findAllByGameIdAndIdIn(Long gameId, Collection<Long> ids);
 
+    List<GamePlayer> findAllByGameIdOrderByJoinedAtAscIdAsc(Long gameId);
+
     Optional<GamePlayer> findByIdAndGameId(Long id, Long gameId);
 
     boolean existsByGameIdAndMemberId(Long gameId, Long memberId);
