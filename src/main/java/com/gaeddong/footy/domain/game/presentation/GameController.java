@@ -4,8 +4,10 @@ import com.gaeddong.footy.domain.game.facade.GameFacade;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamesResponse;
-import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
+import com.gaeddong.footy.domain.game.presentation.dto.RegisterPlayerRequest;
+import com.gaeddong.footy.domain.game.presentation.dto.RegisterPlayerResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
+import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -60,5 +62,15 @@ public class GameController {
     ) {
         gameFacade.updatePlayerPositions(memberId, gameId, gamePlayerId, request);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{gameId}/players")
+    public ResponseEntity<RegisterPlayerResponse> registerPlayer(
+            @AuthenticationPrincipal Long requesterId,
+            @PathVariable Long gameId,
+            @Valid @RequestBody RegisterPlayerRequest request
+    ) {
+        RegisterPlayerResponse response = gameFacade.registerPlayer(requesterId, gameId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }
