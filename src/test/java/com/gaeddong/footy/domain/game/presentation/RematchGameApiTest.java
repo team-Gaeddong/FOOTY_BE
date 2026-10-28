@@ -53,7 +53,8 @@ class RematchGameApiTest {
     void 원본_파티장이_종료된_경기를_새_일시로_다시_생성한다() throws Exception {
         Member host = saveMember("host@example.com", "host-sub");
         Game source = saveGame(host, GameStatus.FINISHED, false);
-        LocalDateTime nextDate = LocalDateTime.now(clock).plusDays(1).withNano(0);
+        // 초가 0이면 LocalDateTime.toString()이 초를 생략해 JSON과 달라지므로 초를 고정한다
+        LocalDateTime nextDate = LocalDateTime.now(clock).plusDays(1).withSecond(30).withNano(0);
 
         mockMvc.perform(post("/games/{gameId}/rematch", source.getId())
                         .header("Authorization", bearer(host))
