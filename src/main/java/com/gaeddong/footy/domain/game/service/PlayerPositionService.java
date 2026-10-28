@@ -12,6 +12,7 @@ import com.gaeddong.footy.domain.member.domain.MemberPosition;
 import com.gaeddong.footy.domain.member.domain.Position;
 import com.gaeddong.footy.domain.member.domain.PositionPriorities;
 import com.gaeddong.footy.global.error.FootyException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,18 +20,12 @@ import java.util.Comparator;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class PlayerPositionService {
 
     private final GameRepository gameRepository;
     private final GamePlayerRepository gamePlayerRepository;
     private final PlayerPositionRepository playerPositionRepository;
-
-    public PlayerPositionService(GameRepository gameRepository, GamePlayerRepository gamePlayerRepository,
-                                 PlayerPositionRepository playerPositionRepository) {
-        this.gameRepository = gameRepository;
-        this.gamePlayerRepository = gamePlayerRepository;
-        this.playerPositionRepository = playerPositionRepository;
-    }
 
     /**
      * 경기별 선수 포지션을 전부 교체한다. 파티장만, 모집 중인 경기에서만 할 수 있다(D-13).

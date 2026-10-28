@@ -108,7 +108,7 @@ class GamePlayerServiceTest {
     }
 
     private GamePlayer player(Long id) {
-        GamePlayer player = new GamePlayer(game, null, "선수" + id);
+        GamePlayer player = new GamePlayer(game, null, "선수" + id, LocalDateTime.now());
         ReflectionTestUtils.setField(player, "id", id);
         return player;
     }

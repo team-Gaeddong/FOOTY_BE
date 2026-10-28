@@ -8,8 +8,8 @@ import com.gaeddong.footy.domain.game.presentation.dto.RegisterPlayerRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.RegisterPlayerResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
-import com.gaeddong.footy.global.auth.CurrentMemberIdProvider;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,20 +25,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/games")
+@RequiredArgsConstructor
 public class GameController {
 
     private final GameFacade gameFacade;
-    private final CurrentMemberIdProvider currentMemberIdProvider;
-
-    public GameController(GameFacade gameFacade, CurrentMemberIdProvider currentMemberIdProvider) {
-        this.gameFacade = gameFacade;
-        this.currentMemberIdProvider = currentMemberIdProvider;
-    }
 
     @PostMapping
-    public ResponseEntity<CreateGameResponse> create(@Valid @RequestBody CreateGameRequest request) {
-        Long hostId = currentMemberIdProvider.currentMemberId();
-        CreateGameResponse response = gameFacade.create(hostId, request);
+    public ResponseEntity<CreateGameResponse> create(@AuthenticationPrincipal Long memberId,
+                                                     @Valid @RequestBody CreateGameRequest request) {
+        CreateGameResponse response = gameFacade.create(memberId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -51,20 +46,21 @@ public class GameController {
     }
 
     @PatchMapping("/{gameId}/players/skill-levels")
-    public ResponseEntity<Void> updateSkillLevels(@PathVariable Long gameId,
+    public ResponseEntity<Void> updateSkillLevels(@AuthenticationPrincipal Long memberId,
+                                                  @PathVariable Long gameId,
                                                   @Valid @RequestBody UpdateSkillLevelsRequest request) {
-        gameFacade.updateSkillLevels(currentMemberIdProvider.currentMemberId(), gameId, request);
+        gameFacade.updateSkillLevels(memberId, gameId, request);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{gameId}/players/{gamePlayerId}/positions")
     public ResponseEntity<Void> updatePlayerPositions(
+            @AuthenticationPrincipal Long memberId,
             @PathVariable Long gameId,
             @PathVariable Long gamePlayerId,
             @RequestBody UpdatePlayerPositionsRequest request
     ) {
-        Long requesterId = currentMemberIdProvider.currentMemberId();
-        gameFacade.updatePlayerPositions(requesterId, gameId, gamePlayerId, request);
+        gameFacade.updatePlayerPositions(memberId, gameId, gamePlayerId, request);
         return ResponseEntity.noContent().build();
     }
 

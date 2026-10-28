@@ -75,7 +75,7 @@ class PlayerPositionServiceTest {
     }
 
     private static GamePlayer player(Game game) {
-        GamePlayer player = new GamePlayer(game, null, "비회원");
+        GamePlayer player = new GamePlayer(game, null, "비회원", NOW);
         ReflectionTestUtils.setField(player, "id", PLAYER_ID);
         return player;
     }

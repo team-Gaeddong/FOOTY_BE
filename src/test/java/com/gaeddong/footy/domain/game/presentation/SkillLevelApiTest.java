@@ -65,8 +65,8 @@ class SkillLevelApiTest {
         game = gameRepository.saveAndFlush(
                 Game.create(host, "일요일 풋살", LocalDateTime.of(2030, 6, 1, 10, 0), "풋살장", 12, 2,
                         LocalDateTime.now()));
-        member = gamePlayerRepository.saveAndFlush(new GamePlayer(game, host, "호스트"));
-        guest = gamePlayerRepository.saveAndFlush(new GamePlayer(game, null, "비회원"));
+        member = gamePlayerRepository.saveAndFlush(new GamePlayer(game, host, "호스트", LocalDateTime.now()));
+        guest = gamePlayerRepository.saveAndFlush(new GamePlayer(game, null, "비회원", LocalDateTime.now()));
     }
 
     @Test
@@ -104,7 +104,7 @@ class SkillLevelApiTest {
         Game otherGame = gameRepository.saveAndFlush(
                 Game.create(host, "다른 경기", LocalDateTime.of(2030, 7, 1, 10, 0), "풋살장", 12, 2,
                         LocalDateTime.now()));
-        GamePlayer otherPlayer = gamePlayerRepository.saveAndFlush(new GamePlayer(otherGame, null, "다른 선수"));
+        GamePlayer otherPlayer = gamePlayerRepository.saveAndFlush(new GamePlayer(otherGame, null, "다른 선수", LocalDateTime.now()));
         String body = """
                 {"players": [{"gamePlayerId": %d, "skillLevel": 5}, {"gamePlayerId": %d, "skillLevel": 5}]}
                 """.formatted(guest.getId(), otherPlayer.getId());
