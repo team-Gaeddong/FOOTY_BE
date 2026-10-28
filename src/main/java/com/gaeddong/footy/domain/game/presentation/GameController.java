@@ -5,6 +5,7 @@ import com.gaeddong.footy.domain.game.presentation.dto.CreateGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.JoinGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.JoinGameResponse;
+import com.gaeddong.footy.domain.game.presentation.dto.ListGamePlayersResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamesResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
@@ -43,6 +44,11 @@ public class GameController {
             @RequestParam(defaultValue = "20") int size
     ) {
         return gameFacade.list(page, size);
+    }
+
+    @GetMapping("/{gameId}/players")
+    public ListGamePlayersResponse listPlayers(@AuthenticationPrincipal Long memberId, @PathVariable Long gameId) {
+        return gameFacade.listPlayers(memberId, gameId);
     }
 
     @PatchMapping("/{gameId}/players/skill-levels")

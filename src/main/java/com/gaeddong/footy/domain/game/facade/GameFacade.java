@@ -6,6 +6,7 @@ import com.gaeddong.footy.domain.game.presentation.dto.CreateGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.JoinGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.JoinGameResponse;
+import com.gaeddong.footy.domain.game.presentation.dto.ListGamePlayersResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamesResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.RematchGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
@@ -14,6 +15,7 @@ import com.gaeddong.footy.domain.game.service.GamePlayerService;
 import com.gaeddong.footy.domain.game.service.GameService;
 import com.gaeddong.footy.domain.game.service.PlayerJoinService;
 import com.gaeddong.footy.domain.game.service.PlayerJoinService.JoinedPlayer;
+import com.gaeddong.footy.domain.game.service.PlayerListService;
 import com.gaeddong.footy.domain.game.service.PlayerPositionService;
 import com.gaeddong.footy.domain.game.service.RematchGameService;
 import com.gaeddong.footy.global.error.FootyException;
@@ -32,6 +34,7 @@ public class GameFacade {
     private final PlayerPositionService playerPositionService;
     private final RematchGameService rematchGameService;
     private final PlayerJoinService playerJoinService;
+    private final PlayerListService playerListService;
 
     public CreateGameResponse create(Long hostId, CreateGameRequest request) {
         Game game = gameService.create(
@@ -71,5 +74,9 @@ public class GameFacade {
     public JoinGameResponse join(Long memberId, Long gameId, JoinGameRequest request) {
         JoinedPlayer joined = playerJoinService.join(memberId, gameId, request.positions());
         return JoinGameResponse.of(joined.player(), joined.positions());
+    }
+
+    public ListGamePlayersResponse listPlayers(Long memberId, Long gameId) {
+        return ListGamePlayersResponse.from(playerListService.list(memberId, gameId));
     }
 }
