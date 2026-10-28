@@ -4,12 +4,15 @@ import com.gaeddong.footy.domain.game.facade.GameFacade;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamesResponse;
-import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
+import com.gaeddong.footy.domain.game.presentation.dto.RegisterPlayerRequest;
+import com.gaeddong.footy.domain.game.presentation.dto.RegisterPlayerResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
+import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
 import com.gaeddong.footy.global.auth.CurrentMemberIdProvider;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -51,6 +54,9 @@ public class GameController {
     public ResponseEntity<Void> updateSkillLevels(@PathVariable Long gameId,
                                                   @Valid @RequestBody UpdateSkillLevelsRequest request) {
         gameFacade.updateSkillLevels(currentMemberIdProvider.currentMemberId(), gameId, request);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{gameId}/players/{gamePlayerId}/positions")
     public ResponseEntity<Void> updatePlayerPositions(
             @PathVariable Long gameId,
@@ -60,5 +66,15 @@ public class GameController {
         Long requesterId = currentMemberIdProvider.currentMemberId();
         gameFacade.updatePlayerPositions(requesterId, gameId, gamePlayerId, request);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{gameId}/players")
+    public ResponseEntity<RegisterPlayerResponse> registerPlayer(
+            @AuthenticationPrincipal Long requesterId,
+            @PathVariable Long gameId,
+            @Valid @RequestBody RegisterPlayerRequest request
+    ) {
+        RegisterPlayerResponse response = gameFacade.registerPlayer(requesterId, gameId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

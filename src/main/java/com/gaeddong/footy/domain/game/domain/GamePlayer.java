@@ -61,6 +61,20 @@ public class GamePlayer {
         this.joinedAt = LocalDateTime.now();
     }
 
+    private GamePlayer(Game game, String name, Integer skillLevel, LocalDateTime joinedAt) {
+        this.game = game;
+        this.name = name;
+        this.skillLevel = skillLevel;
+        this.joinedAt = joinedAt;
+    }
+
+    /**
+     * 파티장이 비회원 선수를 등록한다(member_id NULL). 실력은 생략할 수 있다.
+     */
+    public static GamePlayer registerGuest(Game game, String name, Integer skillLevel, LocalDateTime joinedAt) {
+        return new GamePlayer(game, name, skillLevel, joinedAt);
+    }
+
     public void changeSkillLevel(int skillLevel) {
         this.skillLevel = skillLevel;
     }

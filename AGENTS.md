@@ -69,7 +69,7 @@ FOOTY는 축구 경기를 만들고, 참가 선수의 포지션·실력을 바�
 python3 -m unittest discover -s scripts/harness/tests -v  # 하네스 변경 시 회귀 검사
 ```
 
-- 2026-10-26 기준 `./gradlew test`는 통과한다(106개: `AuthApiTest`, `AuthServiceTest`, `PlayerPositionRepositoryTest`, `GameControllerTest`, `GameListApiTest`, `PlayerPositionApiTest`, `GameServiceTest`, `PlayerPositionServiceTest`, `MemberTest`, `PositionPrioritiesTest`, `MemberPositionRepositoryTest`, `MemberRepositoryTest`, `MemberApiTest`, `MemberProfileServiceTest`, `MemberServiceTest`, `FootyBeApplicationTests`, `JwtProviderTest`). 테스트는 실제 Redis 없이 돈다(Redis 저장소는 목).
+- 2026-10-28 기준 `./gradlew test`는 통과한다(138개: `AuthApiTest`, `AuthServiceTest`, `PlayerPositionRepositoryTest`, `GameControllerTest`, `GameListApiTest`, `PlayerPositionApiTest`, `PlayerRegisterApiTest`, `RematchGameApiTest`, `SkillLevelApiTest`, `GamePlayerServiceTest`, `GameServiceTest`, `PlayerPositionServiceTest`, `PlayerRegisterServiceTest`, `MemberTest`, `PositionPrioritiesTest`, `MemberPositionRepositoryTest`, `MemberRepositoryTest`, `MemberApiTest`, `MemberProfileServiceTest`, `MemberServiceTest`, `FootyBeApplicationTests`, `JwtProviderTest`). 테스트는 실제 Redis 없이 돈다(Redis 저장소는 목).
 - `.github/workflows/harness.yml`은 PR 변경 검사와 기본 브랜치 빌드를 수행한다. 원격에 반영된 뒤에만 CI가 실행되며, 브랜치 보호의 필수 검사 `harness`와 사람 승인 1명 설정은 별도로 적용해야 한다(`README.md`).
 - 종료 코드 0은 명시한 모드의 통과, 1은 실패, 2는 일부 검사다. `--skip-build` 또는 변경 커밋 0개는 완료 증거가 아니다. 기준 ref 누락·얕은 이력은 실패다.
 - 기존 테스트 실행은 필수다. 새 정상·예외 테스트는 권장하며, 팀 전체 필수화는 D-09 확정 후 적용한다. 사용자·이슈가 요구한 테스트는 필수로 수행한다. 누락한 검증 범위는 보고한다.

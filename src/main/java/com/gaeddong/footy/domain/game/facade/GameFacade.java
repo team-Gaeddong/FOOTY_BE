@@ -5,22 +5,24 @@ import com.gaeddong.footy.domain.game.exception.GameErrorCode;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamesResponse;
+import com.gaeddong.footy.domain.game.presentation.dto.RegisterPlayerRequest;
+import com.gaeddong.footy.domain.game.presentation.dto.RegisterPlayerResponse;
+import com.gaeddong.footy.domain.game.presentation.dto.RematchGameRequest;
+import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
 import com.gaeddong.footy.domain.game.service.GamePlayerService;
 import com.gaeddong.footy.domain.game.service.GameService;
-import com.gaeddong.footy.global.error.FootyException;
-import com.gaeddong.footy.domain.game.presentation.dto.RematchGameRequest;
-import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
-import com.gaeddong.footy.domain.game.service.GameService;
 import com.gaeddong.footy.domain.game.service.PlayerPositionService;
+import com.gaeddong.footy.domain.game.service.PlayerRegisterService;
+import com.gaeddong.footy.domain.game.service.PlayerRegisterService.RegisteredPlayer;
 import com.gaeddong.footy.domain.game.service.RematchGameService;
+import com.gaeddong.footy.global.error.FootyException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@RequiredArgsConstructor
 @Component
 @RequiredArgsConstructor
 public class GameFacade {
@@ -29,6 +31,7 @@ public class GameFacade {
     private final GamePlayerService gamePlayerService;
     private final PlayerPositionService playerPositionService;
     private final RematchGameService rematchGameService;
+    private final PlayerRegisterService playerRegisterService;
 
     public CreateGameResponse create(Long hostId, CreateGameRequest request) {
         Game game = gameService.create(
@@ -54,6 +57,8 @@ public class GameFacade {
             }
         }
         gamePlayerService.updateSkillLevels(memberId, gameId, skillLevels);
+    }
+
     public CreateGameResponse rematch(Long requesterId, Long sourceGameId, RematchGameRequest request) {
         return CreateGameResponse.from(rematchGameService.create(requesterId, sourceGameId, request.playDate()));
     }
@@ -61,5 +66,16 @@ public class GameFacade {
     public void updatePlayerPositions(Long requesterId, Long gameId, Long gamePlayerId,
                                       UpdatePlayerPositionsRequest request) {
         playerPositionService.updatePositions(requesterId, gameId, gamePlayerId, request.positions());
+    }
+
+    public RegisterPlayerResponse registerPlayer(Long requesterId, Long gameId, RegisterPlayerRequest request) {
+        RegisteredPlayer registered = playerRegisterService.register(
+                requesterId,
+                gameId,
+                request.name(),
+                request.positions(),
+                request.skillLevel()
+        );
+        return RegisterPlayerResponse.of(registered.player(), registered.positions());
     }
 }
