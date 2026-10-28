@@ -74,4 +74,8 @@ public class GamePlayer {
     public static GamePlayer registerGuest(Game game, String name, Integer skillLevel, LocalDateTime joinedAt) {
         return new GamePlayer(game, name, skillLevel, joinedAt);
     }
+
+    public void changeSkillLevel(int skillLevel) {
+        this.skillLevel = skillLevel;
+    }
 }
