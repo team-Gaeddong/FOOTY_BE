@@ -60,4 +60,8 @@ public class GamePlayer {
         this.name = name;
         this.joinedAt = LocalDateTime.now();
     }
+
+    public void changeSkillLevel(int skillLevel) {
+        this.skillLevel = skillLevel;
+    }
 }
