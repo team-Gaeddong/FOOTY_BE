@@ -4,21 +4,21 @@ import com.gaeddong.footy.domain.game.domain.Game;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamesResponse;
+import com.gaeddong.footy.domain.game.presentation.dto.RematchGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
 import com.gaeddong.footy.domain.game.service.GameService;
 import com.gaeddong.footy.domain.game.service.PlayerPositionService;
+import com.gaeddong.footy.domain.game.service.RematchGameService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
+@RequiredArgsConstructor
 public class GameFacade {
 
     private final GameService gameService;
     private final PlayerPositionService playerPositionService;
-
-    public GameFacade(GameService gameService, PlayerPositionService playerPositionService) {
-        this.gameService = gameService;
-        this.playerPositionService = playerPositionService;
-    }
+    private final RematchGameService rematchGameService;
 
     public CreateGameResponse create(Long hostId, CreateGameRequest request) {
         Game game = gameService.create(
@@ -34,6 +34,10 @@ public class GameFacade {
 
     public ListGamesResponse list(int page, int size) {
         return ListGamesResponse.from(gameService.list(page, size));
+    }
+
+    public CreateGameResponse rematch(Long requesterId, Long sourceGameId, RematchGameRequest request) {
+        return CreateGameResponse.from(rematchGameService.create(requesterId, sourceGameId, request.playDate()));
     }
 
     public void updatePlayerPositions(Long requesterId, Long gameId, Long gamePlayerId,
