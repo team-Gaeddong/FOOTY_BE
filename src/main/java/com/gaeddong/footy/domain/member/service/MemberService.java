@@ -1,6 +1,9 @@
 package com.gaeddong.footy.domain.member.service;
 
 import com.gaeddong.footy.domain.member.domain.Member;
+import com.gaeddong.footy.domain.member.domain.MemberPosition;
+import com.gaeddong.footy.domain.member.domain.Position;
+import com.gaeddong.footy.domain.member.domain.PositionPriorities;
 import com.gaeddong.footy.domain.member.domain.repository.MemberPositionRepository;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
@@ -12,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -43,6 +47,22 @@ public class MemberService {
     public MyProfileResponse getMyProfile(Long memberId) {
         Member member = findActiveMember(memberId);
         return MyProfileResponse.of(member, memberPositionRepository.findAllByMemberIdOrderByPriorityAsc(memberId));
+    }
+
+    /**
+     * 선호 포지션을 전부 교체한다. 순서가 곧 우선순위다(D-13).
+     */
+    @Transactional
+    public void updatePositions(Long memberId, List<Position> positions) {
+        PositionPriorities priorities = new PositionPriorities(positions);
+        Member member = findActiveMember(memberId);
+
+        memberPositionRepository.deleteAllByMemberId(memberId);
+        memberPositionRepository.saveAll(priorities.mapWithPriority((position, priority) -> MemberPosition.builder()
+                .member(member)
+                .position(position)
+                .priority(priority)
+                .build()));
     }
 
     /**

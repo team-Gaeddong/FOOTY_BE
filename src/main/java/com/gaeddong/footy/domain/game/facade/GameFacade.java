@@ -9,21 +9,21 @@ import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
 import com.gaeddong.footy.domain.game.service.GamePlayerService;
 import com.gaeddong.footy.domain.game.service.GameService;
 import com.gaeddong.footy.global.error.FootyException;
+import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
+import com.gaeddong.footy.domain.game.service.GameService;
+import com.gaeddong.footy.domain.game.service.PlayerPositionService;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@RequiredArgsConstructor
 @Component
 public class GameFacade {
 
     private final GameService gameService;
     private final GamePlayerService gamePlayerService;
-
-    public GameFacade(GameService gameService, GamePlayerService gamePlayerService) {
-        this.gameService = gameService;
-        this.gamePlayerService = gamePlayerService;
-    }
+    private final PlayerPositionService playerPositionService;
 
     public CreateGameResponse create(Long hostId, CreateGameRequest request) {
         Game game = gameService.create(
@@ -49,5 +49,8 @@ public class GameFacade {
             }
         }
         gamePlayerService.updateSkillLevels(memberId, gameId, skillLevels);
+    public void updatePlayerPositions(Long requesterId, Long gameId, Long gamePlayerId,
+                                      UpdatePlayerPositionsRequest request) {
+        playerPositionService.updatePositions(requesterId, gameId, gamePlayerId, request.positions());
     }
 }
