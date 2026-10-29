@@ -65,4 +65,8 @@ public class GamePlayer {
     public void changeSkillLevel(int skillLevel) {
         this.skillLevel = skillLevel;
     }
+
+    public void changeSubstitute(boolean substitute) {
+        this.substitute = substitute;
+    }
 }
