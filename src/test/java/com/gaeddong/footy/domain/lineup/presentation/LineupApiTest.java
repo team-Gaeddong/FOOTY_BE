@@ -80,8 +80,12 @@ class LineupApiTest {
     }
 
     private Game saveGame(Member host) {
-        return gameRepository.save(Game.create(host, "일요일 풋살", LocalDateTime.now().plusDays(3), "풋살장", 12, 2,
-                LocalDateTime.now()));
+        return saveGame(host, 12);
+    }
+
+    private Game saveGame(Member host, int maxPlayers) {
+        return gameRepository.save(Game.create(host, "일요일 풋살", LocalDateTime.now().plusDays(3), "풋살장", maxPlayers,
+                2, LocalDateTime.now()));
     }
 
     private GamePlayer savePlayer(Game game, Member member, int order, Integer skillLevel, Position... positions) {
@@ -130,6 +134,7 @@ class LineupApiTest {
                 .andExpect(jsonPath("$.teams[0].members[0].name").value("p1"))
                 .andExpect(jsonPath("$.teams[0].members[0].skillLevel").value(9))
                 .andExpect(jsonPath("$.teams[0].members[0].position").value("FW"))
+                .andExpect(jsonPath("$.teams[0].members[0].isSubstitute").value(false))
                 .andExpect(jsonPath("$.teams[0].members[1].gamePlayerId").value(hostPlayer.getId()))
                 .andExpect(jsonPath("$.teams[0].members[1].position").value("MF"))
                 .andExpect(jsonPath("$.teams[1].name").value("B팀"))
@@ -141,6 +146,32 @@ class LineupApiTest {
 
         assertThat(lineupRepository.existsByGameId(game.getId())).isTrue();
         assertThat(teamMemberRepository.count()).isEqualTo(4);
+    }
+
+    @Test
+    void 최대_인원을_넘으면_실력이_낮은_선수를_후보로_저장한다() throws Exception {
+        Member host = saveMember("host");
+        Game game = saveGame(host, 2);
+        GamePlayer hostPlayer = savePlayer(game, host, 0, 6);
+        GamePlayer p1 = savePlayer(game, saveMember("p1"), 1, 9);
+        GamePlayer p2 = savePlayer(game, saveMember("p2"), 2, 4);
+
+        // 선발 9(p1) → A, 6(host) → B / 후보 4(p2) → A
+        createLineup(host, game.getId())
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.teams[0].totalSkill").value(9))
+                .andExpect(jsonPath("$.teams[0].members", hasSize(2)))
+                .andExpect(jsonPath("$.teams[0].members[0].gamePlayerId").value(p1.getId()))
+                .andExpect(jsonPath("$.teams[0].members[0].isSubstitute").value(false))
+                .andExpect(jsonPath("$.teams[0].members[1].gamePlayerId").value(p2.getId()))
+                .andExpect(jsonPath("$.teams[0].members[1].isSubstitute").value(true))
+                .andExpect(jsonPath("$.teams[1].totalSkill").value(6))
+                .andExpect(jsonPath("$.teams[1].members[0].gamePlayerId").value(hostPlayer.getId()))
+                .andExpect(jsonPath("$.teams[1].members[0].isSubstitute").value(false));
+
+        gamePlayerRepository.flush();
+        assertThat(gamePlayerRepository.findById(p2.getId()).orElseThrow().isSubstitute()).isTrue();
+        assertThat(gamePlayerRepository.findById(p1.getId()).orElseThrow().isSubstitute()).isFalse();
     }
 
     @Test
