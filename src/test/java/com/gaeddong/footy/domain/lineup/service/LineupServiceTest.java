@@ -87,7 +87,11 @@ class LineupServiceTest {
     }
 
     private static Game game() {
-        Game game = Game.create(member(HOST_ID), "일요일 풋살", NOW.plusDays(3), "대구 풋살장", 12, 2, NOW);
+        return game(12);
+    }
+
+    private static Game game(int maxPlayers) {
+        Game game = Game.create(member(HOST_ID), "일요일 풋살", NOW.plusDays(3), "대구 풋살장", maxPlayers, 2, NOW);
         ReflectionTestUtils.setField(game, "id", GAME_ID);
         return game;
     }
@@ -193,6 +197,64 @@ class LineupServiceTest {
                 .flatExtracting(LineupService.CreatedTeam::members)
                 .extracting(member -> member.getGamePlayer().getId(), member -> member.getPosition())
                 .containsExactly(tuple(1L, Position.GK), tuple(2L, Position.FW));
+    }
+
+    @Test
+    void 최대_인원_이하면_후보가_없다() {
+        Game game = game(2);
+        GamePlayer p1 = player(game, 1L, 5);
+        GamePlayer p2 = player(game, 2L, 6);
+        givenGame(game, List.of(p1, p2));
+        when(playerPositionRepository.findAllByGamePlayerIdInOrderByPriorityAsc(anyList())).thenReturn(List.of());
+        givenSavesPassThrough();
+
+        lineupService.create(HOST_ID, GAME_ID);
+
+        assertThat(List.of(p1, p2)).noneMatch(GamePlayer::isSubstitute);
+    }
+
+    @Test
+    void 최대_인원을_넘으면_실력이_낮은_선수가_후보가_되고_합계에서_빠진다() {
+        Game game = game(3);
+        GamePlayer p1 = player(game, 1L, 5);
+        GamePlayer p2 = player(game, 2L, 9);
+        GamePlayer p3 = player(game, 3L, 7);
+        GamePlayer p4 = player(game, 4L, 3);
+        GamePlayer p5 = player(game, 5L, 8);
+        givenGame(game, List.of(p1, p2, p3, p4, p5));
+        when(playerPositionRepository.findAllByGamePlayerIdInOrderByPriorityAsc(anyList())).thenReturn(List.of());
+        givenSavesPassThrough();
+
+        CreatedLineup created = lineupService.create(HOST_ID, GAME_ID);
+
+        // 선발 9(p2), 8(p5), 7(p3) / 후보 5(p1), 3(p4)
+        assertThat(List.of(p2, p5, p3)).noneMatch(GamePlayer::isSubstitute);
+        assertThat(List.of(p1, p4)).allMatch(GamePlayer::isSubstitute);
+        // 후보도 번갈아 배정한다: A = p2, p3, p4(후보), B = p5, p1(후보)
+        assertThat(created.teams().get(0).members())
+                .extracting(member -> member.getGamePlayer().getId())
+                .containsExactly(2L, 3L, 4L);
+        assertThat(created.teams().get(0).team().getTotalSkill()).isEqualTo(16);
+        assertThat(created.teams().get(1).members())
+                .extracting(member -> member.getGamePlayer().getId())
+                .containsExactly(5L, 1L);
+        assertThat(created.teams().get(1).team().getTotalSkill()).isEqualTo(8);
+    }
+
+    @Test
+    void 후보_경계에서_실력이_같으면_늦게_참여한_선수가_후보가_된다() {
+        Game game = game(2);
+        GamePlayer top = player(game, 1L, 9);
+        GamePlayer early = player(game, 2L, 5);
+        GamePlayer late = player(game, 3L, 5);
+        givenGame(game, List.of(top, early, late));
+        when(playerPositionRepository.findAllByGamePlayerIdInOrderByPriorityAsc(anyList())).thenReturn(List.of());
+        givenSavesPassThrough();
+
+        lineupService.create(HOST_ID, GAME_ID);
+
+        assertThat(early.isSubstitute()).isFalse();
+        assertThat(late.isSubstitute()).isTrue();
     }
 
     @Test

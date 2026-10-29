@@ -47,6 +47,7 @@ public class LineupService {
     /**
      * 실력 점수가 높은 선수부터 두 팀에 한 명씩 번갈아 배정한다(#40).
      * 실력이 같으면 먼저 참여한 선수가 앞선다. 배정 포지션은 1순위 희망 포지션이고, 없으면 FW다.
+     * 최대 인원을 넘는 뒤쪽 선수는 후보로 지정하고, 팀에는 배정하되 실력 합계에서 뺀다(#42).
      */
     @Transactional
     public CreatedLineup create(Long requesterId, Long gameId) {
@@ -77,6 +78,7 @@ public class LineupService {
         TEAM_NAMES.forEach(name -> assigned.add(new ArrayList<>()));
         for (int i = 0; i < ranked.size(); i++) {
             assigned.get(i % TEAM_NAMES.size()).add(ranked.get(i));
+            ranked.get(i).changeSubstitute(i >= game.getMaxPlayers());
         }
 
         Map<Long, Position> firstPositions = firstPositions(players);
@@ -93,7 +95,10 @@ public class LineupService {
             Team team = teamRepository.save(Team.builder()
                     .lineup(lineup)
                     .name(TEAM_NAMES.get(i))
-                    .totalSkill(teamPlayers.stream().mapToInt(GamePlayer::getSkillLevel).sum())
+                    .totalSkill(teamPlayers.stream()
+                            .filter(player -> !player.isSubstitute())
+                            .mapToInt(GamePlayer::getSkillLevel)
+                            .sum())
                     .build());
             List<TeamMember> members = teamMemberRepository.saveAll(teamPlayers.stream()
                     .map(player -> TeamMember.builder()

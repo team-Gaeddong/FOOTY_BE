@@ -41,11 +41,12 @@ public record LineupResponse(
         }
     }
 
-    public record TeamMemberResponse(Long gamePlayerId, String name, Integer skillLevel, Position position) {
+    public record TeamMemberResponse(Long gamePlayerId, String name, Integer skillLevel, Position position,
+                                     boolean isSubstitute) {
         static TeamMemberResponse from(TeamMember member) {
             GamePlayer player = member.getGamePlayer();
             return new TeamMemberResponse(player.getId(), player.getName(), player.getSkillLevel(),
-                    member.getPosition());
+                    member.getPosition(), player.isSubstitute());
         }
     }
 }
