@@ -44,4 +44,8 @@ public class Team {
 
     @Column(name = "total_skill")
     private Integer totalSkill;
+
+    public void changeFormation(String formation) {
+        this.formation = formation;
+    }
 }

@@ -56,4 +56,15 @@ public class TeamMember {
 
     @Column(name = "pos_y", precision = 5, scale = 2)
     private BigDecimal posY;
+
+    // 좌표는 경기장 크기 대비 퍼센트(0~100)다
+    public void place(BigDecimal posX, BigDecimal posY) {
+        this.posX = posX;
+        this.posY = posY;
+    }
+
+    public void unplace() {
+        this.posX = null;
+        this.posY = null;
+    }
 }
