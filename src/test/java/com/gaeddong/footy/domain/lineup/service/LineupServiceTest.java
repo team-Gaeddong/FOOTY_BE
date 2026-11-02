@@ -9,11 +9,14 @@ import com.gaeddong.footy.domain.game.domain.repository.PlayerPositionRepository
 import com.gaeddong.footy.domain.game.exception.GameErrorCode;
 import com.gaeddong.footy.domain.lineup.domain.Lineup;
 import com.gaeddong.footy.domain.lineup.domain.LineupMethod;
+import com.gaeddong.footy.domain.lineup.domain.Team;
+import com.gaeddong.footy.domain.lineup.domain.TeamMember;
 import com.gaeddong.footy.domain.lineup.domain.repository.LineupRepository;
 import com.gaeddong.footy.domain.lineup.domain.repository.TeamMemberRepository;
 import com.gaeddong.footy.domain.lineup.domain.repository.TeamRepository;
 import com.gaeddong.footy.domain.lineup.exception.LineupErrorCode;
 import com.gaeddong.footy.domain.lineup.service.LineupService.CreatedLineup;
+import com.gaeddong.footy.domain.lineup.service.LineupService.ViewedLineup;
 import com.gaeddong.footy.domain.member.domain.Member;
 import com.gaeddong.footy.domain.member.domain.Position;
 import com.gaeddong.footy.domain.member.domain.Provider;
@@ -312,5 +315,77 @@ class LineupServiceTest {
         assertThatThrownBy(() -> lineupService.create(HOST_ID, GAME_ID))
                 .hasFieldOrPropertyWithValue("errorCode", LineupErrorCode.UNRATED_PLAYER_EXISTS);
         verify(lineupRepository, never()).save(any());
+    }
+
+    private Lineup savedLineup(Game game, int version) {
+        Lineup lineup = Lineup.builder()
+                .game(game)
+                .version(version)
+                .method(LineupMethod.ALGORITHM)
+                .createdAt(NOW)
+                .build();
+        ReflectionTestUtils.setField(lineup, "id", 50L + version);
+        return lineup;
+    }
+
+    private static Team savedTeam(Lineup lineup, Long id, String name) {
+        Team team = Team.builder().lineup(lineup).name(name).totalSkill(10).build();
+        ReflectionTestUtils.setField(team, "id", id);
+        return team;
+    }
+
+    @Test
+    void 최근_라인업을_팀별_팀원과_함께_조회한다() {
+        Game game = game();
+        Lineup lineup = savedLineup(game, 2);
+        Team teamA = savedTeam(lineup, 100L, "A팀");
+        Team teamB = savedTeam(lineup, 101L, "B팀");
+        TeamMember a1 = TeamMember.builder().team(teamA).gamePlayer(player(game, 1L, 9)).position(Position.FW).build();
+        TeamMember b1 = TeamMember.builder().team(teamB).gamePlayer(player(game, 2L, 8)).position(Position.GK).build();
+        TeamMember a2 = TeamMember.builder().team(teamA).gamePlayer(player(game, 3L, 6)).position(Position.MF).build();
+        when(gameRepository.findById(GAME_ID)).thenReturn(Optional.of(game));
+        when(lineupRepository.findFirstByGameIdOrderByVersionDesc(GAME_ID)).thenReturn(Optional.of(lineup));
+        when(teamRepository.findAllByLineupIdOrderByIdAsc(lineup.getId())).thenReturn(List.of(teamA, teamB));
+        when(teamMemberRepository.findAllByTeamIdInOrderByIdAsc(List.of(100L, 101L))).thenReturn(List.of(a1, b1, a2));
+
+        ViewedLineup viewed = lineupService.getLatest(HOST_ID, GAME_ID);
+
+        assertThat(viewed.skillVisible()).isTrue();
+        assertThat(viewed.lineup().lineup()).isSameAs(lineup);
+        assertThat(viewed.lineup().teams()).hasSize(2);
+        assertThat(viewed.lineup().teams().get(0).team()).isSameAs(teamA);
+        assertThat(viewed.lineup().teams().get(0).members()).containsExactly(a1, a2);
+        assertThat(viewed.lineup().teams().get(1).members()).containsExactly(b1);
+    }
+
+    @Test
+    void 파티장이_아니면_실력을_숨기도록_표시한다() {
+        Game game = game();
+        Lineup lineup = savedLineup(game, 1);
+        when(gameRepository.findById(GAME_ID)).thenReturn(Optional.of(game));
+        when(lineupRepository.findFirstByGameIdOrderByVersionDesc(GAME_ID)).thenReturn(Optional.of(lineup));
+        when(teamRepository.findAllByLineupIdOrderByIdAsc(lineup.getId())).thenReturn(List.of());
+        when(teamMemberRepository.findAllByTeamIdInOrderByIdAsc(List.of())).thenReturn(List.of());
+
+        assertThat(lineupService.getLatest(OTHER_ID, GAME_ID).skillVisible()).isFalse();
+    }
+
+    @Test
+    void 라인업이_없으면_LINEUP_NOT_FOUND() {
+        when(gameRepository.findById(GAME_ID)).thenReturn(Optional.of(game()));
+        when(lineupRepository.findFirstByGameIdOrderByVersionDesc(GAME_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> lineupService.getLatest(HOST_ID, GAME_ID))
+                .hasFieldOrPropertyWithValue("errorCode", LineupErrorCode.LINEUP_NOT_FOUND);
+    }
+
+    @Test
+    void 라인업_조회도_삭제된_경기면_GAME_NOT_FOUND() {
+        Game game = game();
+        ReflectionTestUtils.setField(game, "deleted", true);
+        when(gameRepository.findById(GAME_ID)).thenReturn(Optional.of(game));
+
+        assertThatThrownBy(() -> lineupService.getLatest(HOST_ID, GAME_ID))
+                .hasFieldOrPropertyWithValue("errorCode", GameErrorCode.GAME_NOT_FOUND);
     }
 }

@@ -14,6 +14,7 @@ import com.gaeddong.footy.domain.member.domain.Position;
 import com.gaeddong.footy.domain.member.domain.Provider;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.global.security.jwt.JwtProvider;
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,6 +29,7 @@ import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -244,6 +246,77 @@ class LineupApiTest {
     @Test
     void 토큰_없이_호출하면_401() throws Exception {
         mockMvc.perform(post("/games/1/lineups"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("GLOBAL_401_1"));
+    }
+
+    private ResultActions getLatest(Member requester, Long gameId) throws Exception {
+        return mockMvc.perform(get("/games/{gameId}/lineups/latest", gameId)
+                .header("Authorization", "Bearer " + jwtProvider.createAccessToken(requester.getId())));
+    }
+
+    @Test
+    void 팀을_짠_뒤_라인업을_다시_조회하면_같은_팀이_나온다() throws Exception {
+        Member host = saveMember("host");
+        Game game = saveGame(host);
+        GamePlayer hostPlayer = savePlayer(game, host, 0, 6, Position.MF);
+        GamePlayer p1 = savePlayer(game, saveMember("p1"), 1, 9, Position.FW);
+        GamePlayer p2 = savePlayer(game, saveMember("p2"), 2, 4, Position.GK);
+        GamePlayer p3 = savePlayer(game, saveMember("p3"), 3, 8);
+        String created = createLineup(host, game.getId()).andReturn().getResponse().getContentAsString();
+        Number lineupId = JsonPath.read(created, "$.lineupId");
+
+        getLatest(host, game.getId())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lineupId").value(lineupId.longValue()))
+                .andExpect(jsonPath("$.version").value(1))
+                .andExpect(jsonPath("$.isConfirmed").value(false))
+                .andExpect(jsonPath("$.teams", hasSize(2)))
+                .andExpect(jsonPath("$.teams[0].name").value("A팀"))
+                .andExpect(jsonPath("$.teams[0].totalSkill").value(15))
+                .andExpect(jsonPath("$.teams[0].members[0].gamePlayerId").value(p1.getId()))
+                .andExpect(jsonPath("$.teams[0].members[0].skillLevel").value(9))
+                .andExpect(jsonPath("$.teams[0].members[1].gamePlayerId").value(hostPlayer.getId()))
+                .andExpect(jsonPath("$.teams[1].name").value("B팀"))
+                .andExpect(jsonPath("$.teams[1].members[0].gamePlayerId").value(p3.getId()))
+                .andExpect(jsonPath("$.teams[1].members[1].gamePlayerId").value(p2.getId()))
+                .andExpect(jsonPath("$.teams[1].members[1].position").value("GK"));
+    }
+
+    @Test
+    void 파티장이_아닌_회원은_실력_없이_라인업을_조회한다() throws Exception {
+        Member host = saveMember("host");
+        Member other = saveMember("other");
+        Game game = saveGame(host);
+        savePlayer(game, host, 0, 6);
+        savePlayer(game, other, 1, 9);
+        createLineup(host, game.getId()).andExpect(status().isCreated());
+
+        getLatest(other, game.getId())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.teams", hasSize(2)))
+                .andExpect(jsonPath("$.teams[0].teamId").isNumber())
+                .andExpect(jsonPath("$.teams[0].totalSkill").isEmpty())
+                .andExpect(jsonPath("$.teams[0].members[0].name").value("other"))
+                .andExpect(jsonPath("$.teams[0].members[0].skillLevel").isEmpty());
+    }
+
+    @Test
+    void 팀을_짜기_전에_라인업을_조회하면_404() throws Exception {
+        Member host = saveMember("host");
+        Game game = saveGame(host);
+
+        getLatest(host, game.getId())
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("LINEUP_404_2"));
+        getLatest(host, 999_999L)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GAME_404_1"));
+    }
+
+    @Test
+    void 토큰_없이_라인업을_조회하면_401() throws Exception {
+        mockMvc.perform(get("/games/1/lineups/latest"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("GLOBAL_401_1"));
     }
