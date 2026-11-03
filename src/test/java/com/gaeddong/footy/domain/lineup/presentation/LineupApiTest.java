@@ -3,6 +3,7 @@ package com.gaeddong.footy.domain.lineup.presentation;
 import com.gaeddong.footy.domain.auth.domain.repository.AccessTokenBlacklistRepository;
 import com.gaeddong.footy.domain.game.domain.Game;
 import com.gaeddong.footy.domain.game.domain.GamePlayer;
+import com.gaeddong.footy.domain.game.domain.GameStatus;
 import com.gaeddong.footy.domain.game.domain.PlayerPosition;
 import com.gaeddong.footy.domain.game.domain.repository.GamePlayerRepository;
 import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
@@ -28,6 +29,7 @@ import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -109,6 +111,11 @@ class LineupApiTest {
                 .header("Authorization", "Bearer " + jwtProvider.createAccessToken(requester.getId())));
     }
 
+    private ResultActions confirmLineup(Member requester, Long gameId) throws Exception {
+        return mockMvc.perform(patch("/games/{gameId}/lineups/confirm", gameId)
+                .header("Authorization", "Bearer " + jwtProvider.createAccessToken(requester.getId())));
+    }
+
     @Test
     void 파티장이_팀을_짜면_실력_순으로_두_팀에_나눠_저장한다() throws Exception {
         Member host = saveMember("host");
@@ -146,6 +153,90 @@ class LineupApiTest {
 
         assertThat(lineupRepository.existsByGameId(game.getId())).isTrue();
         assertThat(teamMemberRepository.count()).isEqualTo(4);
+    }
+
+    @Test
+    void 파티장이_팀_구성을_확정하면_확정_상태와_팀_정보를_반환한다() throws Exception {
+        Member host = saveMember("host");
+        Game game = saveGame(host);
+        savePlayer(game, host, 0, 6, Position.MF);
+        savePlayer(game, saveMember("p1"), 1, 9, Position.FW);
+        createLineup(host, game.getId()).andExpect(status().isCreated());
+
+        confirmLineup(host, game.getId())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lineupId").isNumber())
+                .andExpect(jsonPath("$.isConfirmed").value(true))
+                .andExpect(jsonPath("$.teams", hasSize(2)))
+                .andExpect(jsonPath("$.teams[0].members", hasSize(1)))
+                .andExpect(jsonPath("$.teams[1].members", hasSize(1)));
+
+        assertThat(lineupRepository.findByGameId(game.getId()).orElseThrow().isConfirmed()).isTrue();
+        assertThat(gameRepository.findById(game.getId()).orElseThrow().getStatus()).isEqualTo(GameStatus.CONFIRMED);
+    }
+
+    @Test
+    void 파티장이_아니면_팀_구성을_확정할_수_없다() throws Exception {
+        Member host = saveMember("host");
+        Member other = saveMember("other");
+        Game game = saveGame(host);
+        savePlayer(game, host, 0, 6);
+        savePlayer(game, other, 1, 9);
+        createLineup(host, game.getId()).andExpect(status().isCreated());
+
+        confirmLineup(other, game.getId())
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("GAME_403_1"));
+
+        assertThat(lineupRepository.findByGameId(game.getId()).orElseThrow().isConfirmed()).isFalse();
+    }
+
+    @Test
+    void 로그인하지_않으면_팀_구성을_확정할_수_없다() throws Exception {
+        Member host = saveMember("host");
+        Game game = saveGame(host);
+
+        mockMvc.perform(patch("/games/{gameId}/lineups/confirm", game.getId()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void 팀_구성이_없으면_404를_반환한다() throws Exception {
+        Member host = saveMember("host");
+        Game game = saveGame(host);
+
+        confirmLineup(host, game.getId())
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("LINEUP_404_2"));
+    }
+
+    @Test
+    void 이미_확정된_팀_구성은_다시_요청해도_같은_결과를_반환한다() throws Exception {
+        Member host = saveMember("host");
+        Game game = saveGame(host);
+        savePlayer(game, host, 0, 6);
+        savePlayer(game, saveMember("p1"), 1, 9);
+        createLineup(host, game.getId()).andExpect(status().isCreated());
+        confirmLineup(host, game.getId()).andExpect(status().isOk());
+
+        confirmLineup(host, game.getId())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isConfirmed").value(true));
+    }
+
+    @Test
+    void 종료된_경기는_팀_구성을_확정할_수_없다() throws Exception {
+        Member host = saveMember("host");
+        Game game = saveGame(host);
+        savePlayer(game, host, 0, 6);
+        savePlayer(game, saveMember("p1"), 1, 9);
+        createLineup(host, game.getId()).andExpect(status().isCreated());
+        ReflectionTestUtils.setField(game, "status", GameStatus.FINISHED);
+        gameRepository.saveAndFlush(game);
+
+        confirmLineup(host, game.getId())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("GAME_409_1"));
     }
 
     @Test
