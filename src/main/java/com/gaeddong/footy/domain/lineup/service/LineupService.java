@@ -112,6 +112,30 @@ public class LineupService {
         return new CreatedLineup(lineup, teams);
     }
 
+    /**
+     * 가장 최근 회차(version)의 라인업을 조회한다(#49). 로그인한 회원 누구나 볼 수 있고,
+     * 실력은 파티장에게만 보인다(D-20과 같은 기준, D-24).
+     */
+    @Transactional(readOnly = true)
+    public ViewedLineup getLatest(Long requesterId, Long gameId) {
+        Game game = gameRepository.findById(gameId)
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new FootyException(GameErrorCode.GAME_NOT_FOUND));
+        Lineup lineup = lineupRepository.findFirstByGameIdOrderByVersionDesc(gameId)
+                .orElseThrow(() -> new FootyException(LineupErrorCode.LINEUP_NOT_FOUND));
+
+        List<Team> teams = teamRepository.findAllByLineupIdOrderByIdAsc(lineup.getId());
+        // 팀마다 따로 조회하지 않도록 팀원을 한 번에 가져온다
+        Map<Long, List<TeamMember>> membersByTeamId = teamMemberRepository
+                .findAllByTeamIdInOrderByIdAsc(teams.stream().map(Team::getId).toList())
+                .stream()
+                .collect(Collectors.groupingBy(member -> member.getTeam().getId()));
+        List<CreatedTeam> createdTeams = teams.stream()
+                .map(team -> new CreatedTeam(team, membersByTeamId.getOrDefault(team.getId(), List.of())))
+                .toList();
+        return new ViewedLineup(new CreatedLineup(lineup, createdTeams), game.getHost().getId().equals(requesterId));
+    }
+
     // 선수마다 따로 조회하지 않도록 포지션을 한 번에 가져와 1순위만 남긴다
     private Map<Long, Position> firstPositions(List<GamePlayer> players) {
         return playerPositionRepository
@@ -125,5 +149,11 @@ public class LineupService {
     }
 
     public record CreatedTeam(Team team, List<TeamMember> members) {
+    }
+
+    /**
+     * skillVisible은 요청자에게 실력을 보여줄지다. 파티장이 아니면 false.
+     */
+    public record ViewedLineup(CreatedLineup lineup, boolean skillVisible) {
     }
 }

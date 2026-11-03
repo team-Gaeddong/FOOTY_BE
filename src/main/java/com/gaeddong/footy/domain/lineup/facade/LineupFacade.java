@@ -5,6 +5,7 @@ import com.gaeddong.footy.domain.lineup.presentation.dto.LineupResponse;
 import com.gaeddong.footy.domain.lineup.presentation.dto.TacticResponse;
 import com.gaeddong.footy.domain.lineup.presentation.dto.UpdateTacticRequest;
 import com.gaeddong.footy.domain.lineup.service.LineupService;
+import com.gaeddong.footy.domain.lineup.service.LineupService.ViewedLineup;
 import com.gaeddong.footy.domain.lineup.service.TacticService;
 import com.gaeddong.footy.domain.lineup.service.TacticService.Coordinate;
 import com.gaeddong.footy.global.error.FootyException;
@@ -23,6 +24,11 @@ public class LineupFacade {
 
     public LineupResponse create(Long requesterId, Long gameId) {
         return LineupResponse.from(lineupService.create(requesterId, gameId));
+    }
+
+    public LineupResponse getLatest(Long requesterId, Long gameId) {
+        ViewedLineup viewed = lineupService.getLatest(requesterId, gameId);
+        return LineupResponse.of(viewed.lineup(), viewed.skillVisible());
     }
 
     public TacticResponse getTactic(Long gameId, Long teamId) {
