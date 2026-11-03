@@ -59,4 +59,8 @@ public class Lineup {
     // 생성 시각은 호출하는 쪽이 Clock으로 만들어 넘긴다(D-08)
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    public void confirm() {
+        this.confirmed = true;
+    }
 }
