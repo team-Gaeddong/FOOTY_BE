@@ -2,6 +2,7 @@ package com.gaeddong.footy.domain.lineup.service;
 
 import com.gaeddong.footy.domain.game.domain.Game;
 import com.gaeddong.footy.domain.game.domain.GamePlayer;
+import com.gaeddong.footy.domain.game.domain.GameStatus;
 import com.gaeddong.footy.domain.game.domain.PlayerPosition;
 import com.gaeddong.footy.domain.game.domain.repository.GamePlayerRepository;
 import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
@@ -134,6 +135,28 @@ public class LineupService {
                 .map(team -> new CreatedTeam(team, membersByTeamId.getOrDefault(team.getId(), List.of())))
                 .toList();
         return new ViewedLineup(new CreatedLineup(lineup, createdTeams), game.getHost().getId().equals(requesterId));
+    }
+
+    @Transactional
+    public CreatedLineup confirm(Long requesterId, Long gameId) {
+        Game game = gameRepository.findById(gameId)
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new FootyException(GameErrorCode.GAME_NOT_FOUND));
+        if (!game.getHost().getId().equals(requesterId)) {
+            throw new FootyException(GameErrorCode.NOT_GAME_HOST);
+        }
+        if (game.getStatus() == GameStatus.FINISHED) {
+            throw new FootyException(GameErrorCode.GAME_NOT_RECRUITING);
+        }
+
+        Lineup lineup = lineupRepository.findFirstByGameIdOrderByVersionDesc(gameId)
+                .orElseThrow(() -> new FootyException(LineupErrorCode.LINEUP_NOT_FOUND));
+        lineup.confirm();
+        game.confirm();
+        List<CreatedTeam> teams = teamRepository.findAllByLineupIdOrderByIdAsc(lineup.getId()).stream()
+                .map(team -> new CreatedTeam(team, teamMemberRepository.findAllByTeamIdOrderByIdAsc(team.getId())))
+                .toList();
+        return new CreatedLineup(lineup, teams);
     }
 
     // 선수마다 따로 조회하지 않도록 포지션을 한 번에 가져와 1순위만 남긴다
