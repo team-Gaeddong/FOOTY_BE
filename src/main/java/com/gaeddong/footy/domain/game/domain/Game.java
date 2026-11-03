@@ -75,4 +75,8 @@ public class Game {
                               int maxPlayers, int teamCount, LocalDateTime createdAt) {
         return new Game(host, title, playDate, location, maxPlayers, teamCount, createdAt);
     }
+
+    public void confirm() {
+        this.status = GameStatus.CONFIRMED;
+    }
 }

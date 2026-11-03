@@ -31,6 +31,10 @@ public class LineupFacade {
         return LineupResponse.of(viewed.lineup(), viewed.skillVisible());
     }
 
+    public LineupResponse confirm(Long requesterId, Long gameId) {
+        return LineupResponse.from(lineupService.confirm(requesterId, gameId));
+    }
+
     public TacticResponse getTactic(Long gameId, Long teamId) {
         return TacticResponse.from(tacticService.get(gameId, teamId));
     }
