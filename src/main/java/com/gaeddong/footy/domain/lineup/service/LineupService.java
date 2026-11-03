@@ -2,6 +2,7 @@ package com.gaeddong.footy.domain.lineup.service;
 
 import com.gaeddong.footy.domain.game.domain.Game;
 import com.gaeddong.footy.domain.game.domain.GamePlayer;
+import com.gaeddong.footy.domain.game.domain.GameStatus;
 import com.gaeddong.footy.domain.game.domain.PlayerPosition;
 import com.gaeddong.footy.domain.game.domain.repository.GamePlayerRepository;
 import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
@@ -109,6 +110,28 @@ public class LineupService {
                     .toList());
             teams.add(new CreatedTeam(team, members));
         }
+        return new CreatedLineup(lineup, teams);
+    }
+
+    @Transactional
+    public CreatedLineup confirm(Long requesterId, Long gameId) {
+        Game game = gameRepository.findById(gameId)
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new FootyException(GameErrorCode.GAME_NOT_FOUND));
+        if (!game.getHost().getId().equals(requesterId)) {
+            throw new FootyException(GameErrorCode.NOT_GAME_HOST);
+        }
+        if (game.getStatus() == GameStatus.FINISHED) {
+            throw new FootyException(GameErrorCode.GAME_NOT_RECRUITING);
+        }
+
+        Lineup lineup = lineupRepository.findByGameId(gameId)
+                .orElseThrow(() -> new FootyException(LineupErrorCode.LINEUP_NOT_FOUND));
+        lineup.confirm();
+        game.confirm();
+        List<CreatedTeam> teams = teamRepository.findAllByLineupIdOrderByIdAsc(lineup.getId()).stream()
+                .map(team -> new CreatedTeam(team, teamMemberRepository.findAllByTeamIdOrderByIdAsc(team.getId())))
+                .toList();
         return new CreatedLineup(lineup, teams);
     }
 
