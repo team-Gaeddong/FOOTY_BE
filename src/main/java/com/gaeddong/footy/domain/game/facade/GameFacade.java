@@ -4,6 +4,7 @@ import com.gaeddong.footy.domain.game.domain.Game;
 import com.gaeddong.footy.domain.game.exception.GameErrorCode;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameResponse;
+import com.gaeddong.footy.domain.game.presentation.dto.GameDetailResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.JoinGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.JoinGameResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamePlayersResponse;
@@ -11,6 +12,7 @@ import com.gaeddong.footy.domain.game.presentation.dto.ListGamesResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.RematchGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
+import com.gaeddong.footy.domain.game.service.GameDetailService;
 import com.gaeddong.footy.domain.game.service.GamePlayerService;
 import com.gaeddong.footy.domain.game.service.GameService;
 import com.gaeddong.footy.domain.game.service.PlayerJoinService;
@@ -35,6 +37,7 @@ public class GameFacade {
     private final RematchGameService rematchGameService;
     private final PlayerJoinService playerJoinService;
     private final PlayerListService playerListService;
+    private final GameDetailService gameDetailService;
 
     public CreateGameResponse create(Long hostId, CreateGameRequest request) {
         Game game = gameService.create(
@@ -50,6 +53,10 @@ public class GameFacade {
 
     public ListGamesResponse list(int page, int size) {
         return ListGamesResponse.from(gameService.list(page, size));
+    }
+
+    public GameDetailResponse get(Long memberId, Long gameId) {
+        return GameDetailResponse.from(gameDetailService.get(memberId, gameId));
     }
 
     public void updateSkillLevels(Long memberId, Long gameId, UpdateSkillLevelsRequest request) {
