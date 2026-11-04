@@ -3,6 +3,7 @@ package com.gaeddong.footy.domain.game.presentation;
 import com.gaeddong.footy.domain.game.facade.GameFacade;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameResponse;
+import com.gaeddong.footy.domain.game.presentation.dto.GameDetailResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.JoinGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.JoinGameResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamePlayersResponse;
@@ -44,6 +45,11 @@ public class GameController {
             @RequestParam(defaultValue = "20") int size
     ) {
         return gameFacade.list(page, size);
+    }
+
+    @GetMapping("/{gameId}")
+    public GameDetailResponse get(@AuthenticationPrincipal Long memberId, @PathVariable Long gameId) {
+        return gameFacade.get(memberId, gameId);
     }
 
     @GetMapping("/{gameId}/players")
