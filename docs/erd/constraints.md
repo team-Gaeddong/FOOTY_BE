@@ -8,7 +8,7 @@ ERD Cloud에는 UNIQUE 제약과 AUTO_INCREMENT를 입력할 수 없어서, 그 
 
 ## AUTO_INCREMENT
 
-15개 테이블의 PK(`BIGINT`)는 모두 `AUTO_INCREMENT`다. JPA에서는 `@GeneratedValue(strategy = GenerationType.IDENTITY)`로 매핑한다.
+16개 테이블의 PK(`BIGINT`)는 모두 `AUTO_INCREMENT`다. JPA에서는 `@GeneratedValue(strategy = GenerationType.IDENTITY)`로 매핑한다.
 
 ## UNIQUE
 
@@ -18,6 +18,7 @@ ERD Cloud에는 UNIQUE 제약과 AUTO_INCREMENT를 입력할 수 없어서, 그 
 | `uk_member_provider` | `member` | `provider`, `provider_id` | Google 계정 1개당 회원 1명 |
 | `uk_game_player_member` | `game_player` | `game_id`, `member_id` | 한 경기에 같은 회원이 중복 참가하지 않음(비회원은 `member_id` NULL이라 제약 대상 아님) |
 | `uk_balance_review` | `balance_review` | `game_id`, `writer_id` | 한 경기에서 회원당 밸런스 평가 1건 |
+| `uk_balance_review_reason` | `balance_review_reason` | `balance_review_id`, `reason` | 밸런스 평가 1건에 같은 사유 중복 없음(D-27) |
 | `uk_mvp_vote` | `mvp_vote` | `game_id`, `voter_id` | 한 경기에서 회원당 MVP 투표 1건 |
 | `uk_poll_answer` | `poll_answer` | `poll_option_id`, `member_id` | 같은 선택지에 회원당 응답 1건 |
 
