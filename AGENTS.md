@@ -39,7 +39,7 @@ FOOTY는 축구 경기를 만들고, 참가 선수의 포지션·실력을 바�
 
 ## 3. 도메인과 스키마 규칙
 
-- 테이블 15개: `member`, `member_position`, `game`, `game_player`, `player_position`, `lineup`, `team`, `team_member`, `balance_review`, `mvp_vote`, `notice`, `poll`, `poll_option`, `poll_answer`, `report`
+- 테이블 16개: `member`, `member_position`, `game`, `game_player`, `player_position`, `lineup`, `team`, `team_member`, `balance_review`, `balance_review_reason`, `mvp_vote`, `notice`, `poll`, `poll_option`, `poll_answer`, `report`
 - 엔티티·컬럼·제약은 `docs/erd/footy_erd.sql`과, UNIQUE 제약은 `docs/erd/constraints.md`와 일치해야 한다. 스키마 변경이 필요하면 코드를 먼저 바꾸지 말고 변경안을 보고한다(ERD Cloud가 먼저 바뀌어야 한다. UNIQUE는 `constraints.md`가 먼저).
 - ERD에 이미 반영된 도메인 규칙
   - 로그인은 Google OAuth만 쓴다. 회원은 `member.provider`+`provider_id`로 식별하고, 첫 로그인 때 생성한 뒤 온보딩을 마치면 `is_onboarded=1`이 된다(온보딩 전 `nickname`은 NULL).
@@ -69,7 +69,7 @@ FOOTY는 축구 경기를 만들고, 참가 선수의 포지션·실력을 바�
 python3 -m unittest discover -s scripts/harness/tests -v  # 하네스 변경 시 회귀 검사
 ```
 
-- 2026-11-04 기준 `./gradlew test`는 통과한다(236개: `AuthApiTest`, `AuthServiceTest`, `PlayerPositionRepositoryTest`, `GameControllerTest`, `GameCreateApiTest`, `GameDetailApiTest`, `GameListApiTest`, `LineupApiTest`, `LineupServiceTest`, `PlayerJoinApiTest`, `PlayerListApiTest`, `PlayerPositionApiTest`, `RematchGameApiTest`, `SkillLevelApiTest`, `TacticApiTest`, `GameDetailServiceTest`, `GamePlayerServiceTest`, `GameServiceTest`, `PlayerJoinServiceTest`, `PlayerListServiceTest`, `PlayerPositionServiceTest`, `TacticServiceTest`, `MemberTest`, `PositionPrioritiesTest`, `MemberPositionRepositoryTest`, `MemberRepositoryTest`, `MemberFacadeTest`, `MemberApiTest`, `MemberProfileServiceTest`, `MemberServiceTest`, `FootyBeApplicationTests`, `CorsTest`, `CorsDisabledTest`, `JwtProviderTest`, `OAuth2LoginSuccessHandlerTest`). 테스트는 실제 Redis 없이 돈다(Redis 저장소는 목).
+- 2026-11-05 기준 `./gradlew test`는 통과한다(251개: `AuthApiTest`, `BalanceReviewApiTest`, `NoticeApiTest`, `AuthServiceTest`, `PlayerPositionRepositoryTest`, `GameControllerTest`, `GameCreateApiTest`, `GameDetailApiTest`, `GameListApiTest`, `LineupApiTest`, `LineupServiceTest`, `PlayerJoinApiTest`, `PlayerListApiTest`, `PlayerPositionApiTest`, `RematchGameApiTest`, `SkillLevelApiTest`, `TacticApiTest`, `GameDetailServiceTest`, `GamePlayerServiceTest`, `GameServiceTest`, `PlayerJoinServiceTest`, `PlayerListServiceTest`, `PlayerPositionServiceTest`, `TacticServiceTest`, `MemberTest`, `PositionPrioritiesTest`, `MemberPositionRepositoryTest`, `MemberRepositoryTest`, `MemberFacadeTest`, `MemberApiTest`, `MemberProfileServiceTest`, `MemberServiceTest`, `FootyBeApplicationTests`, `CorsTest`, `CorsDisabledTest`, `JwtProviderTest`, `OAuth2LoginSuccessHandlerTest`). 테스트는 실제 Redis 없이 돈다(Redis 저장소는 목).
 - `.github/workflows/harness.yml`은 PR 변경 검사와 기본 브랜치 빌드를 수행한다. 원격에 반영된 뒤에만 CI가 실행되며, 브랜치 보호의 필수 검사 `harness`와 사람 승인 1명 설정은 별도로 적용해야 한다(`README.md`).
 - 종료 코드 0은 명시한 모드의 통과, 1은 실패, 2는 일부 검사다. `--skip-build` 또는 변경 커밋 0개는 완료 증거가 아니다. 기준 ref 누락·얕은 이력은 실패다.
 - 기존 테스트 실행은 필수다. 새 정상·예외 테스트는 권장하며, 팀 전체 필수화는 D-09 확정 후 적용한다. 사용자·이슈가 요구한 테스트는 필수로 수행한다. 누락한 검증 범위는 보고한다.
