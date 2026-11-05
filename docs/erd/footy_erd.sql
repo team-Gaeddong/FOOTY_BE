@@ -1,5 +1,6 @@
 -- FOOTY ERD 스냅샷
 -- 원본: ERD Cloud "footy" 다이어그램 (2026-10-14 Import한 DDL, 2026-10-19 member 변경 반영)
+-- 2026-11-05 balance_review_reason 추가·score 범위 1~10 (D-27, ERD Cloud 반영 대기).
 -- 원본과 다르면 원본이 우선이다. 차이는 docs/harness/decisions.md C-12, C-15 참고.
 -- 컬럼·NULL·DEFAULT·FK는 원본 Export와 일치.
 -- UNIQUE·AUTO_INCREMENT의 기준은 docs/erd/constraints.md (원본 ERD Cloud에 표기 불가).
@@ -106,7 +107,7 @@ CREATE TABLE balance_review (
   balance_review_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '밸런스 평가 ID',
   game_id BIGINT NOT NULL COMMENT '경기 ID',
   writer_id BIGINT NOT NULL COMMENT '작성자 ID',
-  score INT NOT NULL COMMENT '밸런스 점수(1~5)',
+  score INT NOT NULL COMMENT '밸런스 점수(1~10)',
   comment VARCHAR(500) NULL COMMENT '의견',
   created_at DATETIME NOT NULL COMMENT '작성일',
   PRIMARY KEY (balance_review_id),
@@ -114,6 +115,15 @@ CREATE TABLE balance_review (
   CONSTRAINT fk_balance_review_game FOREIGN KEY (game_id) REFERENCES game (game_id),
   CONSTRAINT fk_balance_review_writer FOREIGN KEY (writer_id) REFERENCES member (member_id)
 ) COMMENT '경기 이후 밸런스 평가';
+
+CREATE TABLE balance_review_reason (
+  balance_review_reason_id BIGINT NOT NULL AUTO_INCREMENT COMMENT '밸런스 평가 사유 ID',
+  balance_review_id BIGINT NOT NULL COMMENT '밸런스 평가 ID',
+  reason VARCHAR(30) NOT NULL COMMENT '사유(OUR_TEAM_TOO_WEAK/OPPONENT_TOO_STRONG/SKILL_GAP/POSITION_MISMATCH/HEADCOUNT_MISMATCH/WELL_BALANCED)',
+  PRIMARY KEY (balance_review_reason_id),
+  UNIQUE KEY uk_balance_review_reason (balance_review_id, reason),
+  CONSTRAINT fk_balance_review_reason_review FOREIGN KEY (balance_review_id) REFERENCES balance_review (balance_review_id)
+) COMMENT '밸런스 평가 체크박스 사유';
 
 CREATE TABLE mvp_vote (
   mvp_vote_id BIGINT NOT NULL AUTO_INCREMENT COMMENT 'MVP 투표 ID',
