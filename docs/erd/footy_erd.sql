@@ -1,6 +1,6 @@
 -- FOOTY ERD 스냅샷
 -- 원본: ERD Cloud "footy" 다이어그램 (2026-10-14 Import한 DDL, 2026-10-19 member 변경 반영)
--- 2026-11-05 balance_review_reason 추가·score 범위 1~10 (D-27, ERD Cloud 반영 완료).
+-- 2026-11-05 balance_review_reason 추가·score 범위 1~10 (D-28, ERD Cloud 반영 완료).
 -- 원본과 다르면 원본이 우선이다. 차이는 docs/harness/decisions.md C-12, C-15 참고.
 -- 컬럼·NULL·DEFAULT·FK는 원본 Export와 일치.
 -- UNIQUE·AUTO_INCREMENT의 기준은 docs/erd/constraints.md (원본 ERD Cloud에 표기 불가).

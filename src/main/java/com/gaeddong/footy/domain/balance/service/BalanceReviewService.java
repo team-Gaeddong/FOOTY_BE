@@ -63,7 +63,7 @@ public class BalanceReviewService {
                 .game(game)
                 .writer(writer)
                 .score(score)
-                // 공백만 입력한 의견은 남기지 않는다(D-27)
+                // 공백만 입력한 의견은 남기지 않는다(D-28)
                 .comment(comment == null || comment.isBlank() ? null : comment)
                 .createdAt(LocalDateTime.now(clock))
                 .build());

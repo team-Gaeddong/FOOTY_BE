@@ -48,7 +48,7 @@ public class BalanceReview {
     @JoinColumn(name = "writer_id", nullable = false, foreignKey = @ForeignKey(name = "fk_balance_review_writer"))
     private Member writer;
 
-    // 1~10 (D-27)
+    // 1~10 (D-28)
     @Column(name = "score", nullable = false)
     private int score;
 

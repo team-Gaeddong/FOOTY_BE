@@ -1,7 +1,7 @@
 package com.gaeddong.footy.domain.balance.domain;
 
 /**
- * 밸런스 평가 체크박스 사유(D-27).
+ * 밸런스 평가 체크박스 사유(D-28).
  */
 public enum BalanceReason {
     OUR_TEAM_TOO_WEAK,
