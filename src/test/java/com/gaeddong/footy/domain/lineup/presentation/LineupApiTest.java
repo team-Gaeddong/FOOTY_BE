@@ -173,7 +173,7 @@ class LineupApiTest {
                 .andExpect(jsonPath("$.teams[0].members", hasSize(1)))
                 .andExpect(jsonPath("$.teams[1].members", hasSize(1)));
 
-        assertThat(lineupRepository.findByGameId(game.getId()).orElseThrow().isConfirmed()).isTrue();
+        assertThat(lineupRepository.findFirstByGameIdOrderByVersionDesc(game.getId()).orElseThrow().isConfirmed()).isTrue();
         assertThat(gameRepository.findById(game.getId()).orElseThrow().getStatus()).isEqualTo(GameStatus.CONFIRMED);
     }
 
@@ -190,7 +190,7 @@ class LineupApiTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("GAME_403_1"));
 
-        assertThat(lineupRepository.findByGameId(game.getId()).orElseThrow().isConfirmed()).isFalse();
+        assertThat(lineupRepository.findFirstByGameIdOrderByVersionDesc(game.getId()).orElseThrow().isConfirmed()).isFalse();
     }
 
     @Test

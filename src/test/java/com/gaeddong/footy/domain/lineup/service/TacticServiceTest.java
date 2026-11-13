@@ -4,6 +4,7 @@ import com.gaeddong.footy.domain.game.domain.Game;
 import com.gaeddong.footy.domain.game.domain.GamePlayer;
 import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
 import com.gaeddong.footy.domain.game.exception.GameErrorCode;
+import com.gaeddong.footy.domain.game.service.GameReader;
 import com.gaeddong.footy.domain.lineup.domain.Lineup;
 import com.gaeddong.footy.domain.lineup.domain.LineupMethod;
 import com.gaeddong.footy.domain.lineup.domain.Team;
@@ -64,7 +65,7 @@ class TacticServiceTest {
 
     @BeforeEach
     void setUp() {
-        tacticService = new TacticService(gameRepository, teamRepository, teamMemberRepository);
+        tacticService = new TacticService(new GameReader(gameRepository), teamRepository, teamMemberRepository);
         game = Game.create(member(HOST_ID), "일요일 풋살", NOW.plusDays(3), "대구 풋살장", 12, 2, NOW);
         ReflectionTestUtils.setField(game, "id", GAME_ID);
         team = team(false);

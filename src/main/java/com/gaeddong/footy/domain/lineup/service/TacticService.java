@@ -1,8 +1,6 @@
 package com.gaeddong.footy.domain.lineup.service;
 
-import com.gaeddong.footy.domain.game.domain.Game;
-import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
-import com.gaeddong.footy.domain.game.exception.GameErrorCode;
+import com.gaeddong.footy.domain.game.service.GameReader;
 import com.gaeddong.footy.domain.lineup.domain.Team;
 import com.gaeddong.footy.domain.lineup.domain.TeamMember;
 import com.gaeddong.footy.domain.lineup.domain.repository.TeamMemberRepository;
@@ -23,7 +21,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TacticService {
 
-    private final GameRepository gameRepository;
+    private final GameReader gameReader;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
 
@@ -32,7 +30,8 @@ public class TacticService {
      */
     @Transactional(readOnly = true)
     public Tactic get(Long gameId, Long teamId) {
-        findGame(gameId);
+        // 삭제된 경기의 팀은 보여주지 않는다
+        gameReader.getGame(gameId);
         Team team = findTeam(gameId, teamId);
         return new Tactic(team, teamMemberRepository.findAllByTeamIdOrderByIdAsc(teamId));
     }
@@ -40,45 +39,45 @@ public class TacticService {
     /**
      * 포메이션과 배치를 통째로 바꾼다(#45). placements에 없는 팀원은 배치 해제된다.
      * 파티장만 할 수 있고, 팀이 확정된 뒤에는 바꿀 수 없다.
+     *
+     * @param placements 경기 참가자 ID(game_player_id)별 좌표
      */
     @Transactional
     public Tactic update(Long requesterId, Long gameId, Long teamId, String formation,
                          Map<Long, Coordinate> placements) {
-        Game game = findGame(gameId);
-        if (!game.getHost().getId().equals(requesterId)) {
-            throw new FootyException(GameErrorCode.NOT_GAME_HOST);
-        }
+        gameReader.getGameAsHost(gameId, requesterId);
         Team team = findTeam(gameId, teamId);
         if (team.getLineup().isConfirmed()) {
             throw new FootyException(LineupErrorCode.LINEUP_CONFIRMED);
         }
 
         List<TeamMember> members = teamMemberRepository.findAllByTeamIdOrderByIdAsc(teamId);
-        Set<Long> memberPlayerIds = members.stream()
-                .map(member -> member.getGamePlayer().getId())
-                .collect(Collectors.toSet());
-        if (!memberPlayerIds.containsAll(placements.keySet())) {
-            throw new FootyException(LineupErrorCode.NOT_TEAM_MEMBER);
-        }
+        validateAllInTeam(placements.keySet(), members);
 
         team.changeFormation(formation);
-        for (TeamMember member : members) {
-            Coordinate coordinate = placements.get(member.getGamePlayer().getId());
-            if (coordinate == null) {
-                member.unplace();
-            } else {
-                member.place(coordinate.posX(), coordinate.posY());
-            }
-        }
+        members.forEach(member -> applyPlacement(member, placements.get(member.getGamePlayer().getId())));
         return new Tactic(team, members);
     }
 
-    private Game findGame(Long gameId) {
-        return gameRepository.findById(gameId)
-                .filter(found -> !found.isDeleted())
-                .orElseThrow(() -> new FootyException(GameErrorCode.GAME_NOT_FOUND));
+    private void validateAllInTeam(Set<Long> placedPlayerIds, List<TeamMember> members) {
+        Set<Long> memberPlayerIds = members.stream()
+                .map(member -> member.getGamePlayer().getId())
+                .collect(Collectors.toSet());
+        if (!memberPlayerIds.containsAll(placedPlayerIds)) {
+            throw new FootyException(LineupErrorCode.NOT_TEAM_MEMBER);
+        }
     }
 
+    // 좌표가 없으면(요청 목록에 없는 팀원) 배치를 해제한다
+    private void applyPlacement(TeamMember member, Coordinate coordinate) {
+        if (coordinate == null) {
+            member.unplace();
+        } else {
+            member.place(coordinate.posX(), coordinate.posY());
+        }
+    }
+
+    // 다른 경기에 속한 팀도 없는 팀으로 본다
     private Team findTeam(Long gameId, Long teamId) {
         return teamRepository.findByIdAndLineupGameId(teamId, gameId)
                 .orElseThrow(() -> new FootyException(LineupErrorCode.TEAM_NOT_FOUND));
