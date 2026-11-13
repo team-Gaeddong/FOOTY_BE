@@ -78,4 +78,12 @@ class JwtProviderTest {
         assertThat(providerAt(NOW.plus(Duration.ofMinutes(10))).getRemainingTime(accessToken))
                 .isEqualTo(Duration.ofMinutes(20));
     }
+
+    @Test
+    void 이미_만료된_토큰의_남은_시간은_0이다() {
+        String accessToken = providerAt(NOW).createAccessToken(1L);
+
+        assertThat(providerAt(NOW.plus(Duration.ofMinutes(31))).getRemainingTime(accessToken))
+                .isEqualTo(Duration.ZERO);
+    }
 }
