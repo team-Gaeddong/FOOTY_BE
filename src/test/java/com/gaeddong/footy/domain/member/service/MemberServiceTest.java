@@ -37,7 +37,7 @@ class MemberServiceTest {
 
     private final MemberRepository memberRepository = mock(MemberRepository.class);
     private final MemberPositionRepository memberPositionRepository = mock(MemberPositionRepository.class);
-    private final MemberService memberService = new MemberService(memberRepository, memberPositionRepository,
+    private final MemberService memberService = new MemberService(new MemberReader(memberRepository), memberPositionRepository,
             Clock.fixed(NOW.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()));
 
     private static Member newMember() {

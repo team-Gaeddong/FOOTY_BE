@@ -14,6 +14,7 @@ import com.gaeddong.footy.domain.member.domain.Position;
 import com.gaeddong.footy.domain.member.domain.Provider;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
+import com.gaeddong.footy.domain.member.service.MemberReader;
 import com.gaeddong.footy.global.error.FootyException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,8 +65,8 @@ class PlayerJoinServiceTest {
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(NOW.atZone(ZONE).toInstant(), ZONE);
-        playerJoinService = new PlayerJoinService(gameRepository, gamePlayerRepository, playerPositionRepository,
-                memberRepository, clock);
+        playerJoinService = new PlayerJoinService(new GameReader(gameRepository), new MemberReader(memberRepository),
+                gamePlayerRepository, playerPositionRepository, clock);
     }
 
     private static Member member(Long id, String nickname) {

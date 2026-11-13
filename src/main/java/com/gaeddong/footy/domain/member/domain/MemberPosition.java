@@ -18,6 +18,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * 회원 선호 포지션. 스키마는 docs/erd/footy_erd.sql의 member_position을 따른다.
  */
@@ -44,4 +46,15 @@ public class MemberPosition {
 
     @Column(name = "priority", nullable = false)
     private int priority;
+
+    /**
+     * 순서가 곧 우선순위인 포지션 목록을 회원의 선호 포지션 행들로 바꾼다(D-13).
+     */
+    public static List<MemberPosition> allOf(Member member, PositionPriorities priorities) {
+        return priorities.mapWithPriority((position, priority) -> MemberPosition.builder()
+                .member(member)
+                .position(position)
+                .priority(priority)
+                .build());
+    }
 }

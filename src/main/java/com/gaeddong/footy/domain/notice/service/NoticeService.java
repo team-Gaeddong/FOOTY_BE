@@ -1,11 +1,9 @@
 package com.gaeddong.footy.domain.notice.service;
 
 import com.gaeddong.footy.domain.game.domain.Game;
-import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
-import com.gaeddong.footy.domain.game.exception.GameErrorCode;
+import com.gaeddong.footy.domain.game.service.GameReader;
 import com.gaeddong.footy.domain.notice.domain.Notice;
 import com.gaeddong.footy.domain.notice.domain.repository.NoticeRepository;
-import com.gaeddong.footy.global.error.FootyException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,26 +15,23 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class NoticeService {
 
-    private final GameRepository gameRepository;
+    private final GameReader gameReader;
     private final NoticeRepository noticeRepository;
     private final Clock clock;
 
+    /**
+     * 파티장이 경기 공지를 쓴다. 삭제되지 않은 경기면 상태와 관계없이 쓸 수 있다(D-26).
+     */
     @Transactional
     public Notice create(Long requesterId, Long gameId, String title, String content) {
-        Game game = gameRepository.findById(gameId)
-                .filter(found -> !found.isDeleted())
-                .orElseThrow(() -> new FootyException(GameErrorCode.GAME_NOT_FOUND));
-        if (!game.getHost().getId().equals(requesterId)) {
-            throw new FootyException(GameErrorCode.NOT_GAME_HOST);
-        }
+        Game game = gameReader.getGameAsHost(gameId, requesterId);
 
-        Notice notice = Notice.builder()
+        return noticeRepository.save(Notice.builder()
                 .game(game)
                 .writer(game.getHost())
                 .title(title)
                 .content(content)
                 .createdAt(LocalDateTime.now(clock))
-                .build();
-        return noticeRepository.save(notice);
+                .build());
     }
 }

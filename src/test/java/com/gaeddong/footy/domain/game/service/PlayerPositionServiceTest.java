@@ -59,7 +59,8 @@ class PlayerPositionServiceTest {
 
     @BeforeEach
     void setUp() {
-        playerPositionService = new PlayerPositionService(gameRepository, gamePlayerRepository, playerPositionRepository);
+        playerPositionService = new PlayerPositionService(new GameReader(gameRepository), gamePlayerRepository,
+                playerPositionRepository);
     }
 
     private static Game game() {

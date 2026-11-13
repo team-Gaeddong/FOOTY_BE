@@ -51,7 +51,8 @@ class PlayerListServiceTest {
 
     @BeforeEach
     void setUp() {
-        playerListService = new PlayerListService(gameRepository, gamePlayerRepository, playerPositionRepository);
+        playerListService = new PlayerListService(new GameReader(gameRepository), gamePlayerRepository,
+                playerPositionRepository);
     }
 
     private static Member member(Long id, String nickname) {
