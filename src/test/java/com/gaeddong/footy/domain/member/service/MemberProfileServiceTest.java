@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
-@Import({JpaAuditingConfig.class, ClockConfig.class, MemberService.class})
+@Import({JpaAuditingConfig.class, ClockConfig.class, MemberService.class, MemberReader.class})
 class MemberProfileServiceTest {
 
     @Autowired

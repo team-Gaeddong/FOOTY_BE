@@ -40,12 +40,19 @@ public class LineupFacade {
     }
 
     public TacticResponse updateTactic(Long requesterId, Long gameId, Long teamId, UpdateTacticRequest request) {
-        Map<Long, Coordinate> placements = new HashMap<>();
+        Map<Long, Coordinate> placements = toCoordinatesByPlayerId(request);
+        return TacticResponse.from(tacticService.update(requesterId, gameId, teamId, request.formation(), placements));
+    }
+
+    // 같은 선수가 두 번 오면 어느 좌표를 쓸지 알 수 없으므로 거부한다
+    private Map<Long, Coordinate> toCoordinatesByPlayerId(UpdateTacticRequest request) {
+        Map<Long, Coordinate> coordinates = new HashMap<>();
         for (UpdateTacticRequest.Placement placement : request.placements()) {
-            if (placements.put(placement.gamePlayerId(), new Coordinate(placement.posX(), placement.posY())) != null) {
+            Coordinate coordinate = new Coordinate(placement.posX(), placement.posY());
+            if (coordinates.put(placement.gamePlayerId(), coordinate) != null) {
                 throw new FootyException(LineupErrorCode.DUPLICATE_PLACEMENT);
             }
         }
-        return TacticResponse.from(tacticService.update(requesterId, gameId, teamId, request.formation(), placements));
+        return coordinates;
     }
 }

@@ -2,10 +2,8 @@ package com.gaeddong.footy.domain.game.service;
 
 import com.gaeddong.footy.domain.game.domain.Game;
 import com.gaeddong.footy.domain.game.domain.GamePlayer;
-import com.gaeddong.footy.domain.game.domain.GameStatus;
 import com.gaeddong.footy.domain.game.domain.PlayerPosition;
 import com.gaeddong.footy.domain.game.domain.repository.GamePlayerRepository;
-import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
 import com.gaeddong.footy.domain.game.domain.repository.PlayerPositionRepository;
 import com.gaeddong.footy.domain.game.exception.GameErrorCode;
 import com.gaeddong.footy.domain.member.domain.MemberPosition;
@@ -23,7 +21,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PlayerPositionService {
 
-    private final GameRepository gameRepository;
+    private final GameReader gameReader;
     private final GamePlayerRepository gamePlayerRepository;
     private final PlayerPositionRepository playerPositionRepository;
 
@@ -33,20 +31,15 @@ public class PlayerPositionService {
     @Transactional
     public void updatePositions(Long requesterId, Long gameId, Long gamePlayerId, List<Position> positions) {
         PositionPriorities priorities = new PositionPriorities(positions);
-        Game game = gameRepository.findById(gameId)
-                .filter(found -> !found.isDeleted())
-                .orElseThrow(() -> new FootyException(GameErrorCode.GAME_NOT_FOUND));
-        if (!game.getHost().getId().equals(requesterId)) {
-            throw new FootyException(GameErrorCode.NOT_GAME_HOST);
-        }
-        if (game.getStatus() != GameStatus.RECRUITING) {
+        Game game = gameReader.getGameAsHost(gameId, requesterId);
+        if (!game.isRecruiting()) {
             throw new FootyException(GameErrorCode.GAME_NOT_RECRUITING);
         }
         GamePlayer player = gamePlayerRepository.findByIdAndGameId(gamePlayerId, gameId)
                 .orElseThrow(() -> new FootyException(GameErrorCode.GAME_PLAYER_NOT_FOUND));
 
         playerPositionRepository.deleteAllByGamePlayerId(player.getId());
-        playerPositionRepository.saveAll(toPlayerPositions(player, priorities));
+        playerPositionRepository.saveAll(PlayerPosition.allOf(player, priorities));
     }
 
     /**
@@ -62,14 +55,6 @@ public class PlayerPositionService {
                 .sorted(Comparator.comparingInt(MemberPosition::getPriority))
                 .map(MemberPosition::getPosition)
                 .toList();
-        playerPositionRepository.saveAll(toPlayerPositions(player, new PositionPriorities(positions)));
-    }
-
-    private List<PlayerPosition> toPlayerPositions(GamePlayer player, PositionPriorities priorities) {
-        return priorities.mapWithPriority((position, priority) -> PlayerPosition.builder()
-                .gamePlayer(player)
-                .position(position)
-                .priority(priority)
-                .build());
+        playerPositionRepository.saveAll(PlayerPosition.allOf(player, new PositionPriorities(positions)));
     }
 }

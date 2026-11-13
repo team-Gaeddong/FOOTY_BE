@@ -12,6 +12,7 @@ import com.gaeddong.footy.domain.member.domain.Position;
 import com.gaeddong.footy.domain.member.domain.Provider;
 import com.gaeddong.footy.domain.member.domain.repository.MemberPositionRepository;
 import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
+import com.gaeddong.footy.domain.member.service.MemberReader;
 import com.gaeddong.footy.global.error.FootyException;
 import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,8 +63,8 @@ class GameServiceTest {
 
     @BeforeEach
     void setUp() {
-        gameService = new GameService(gameRepository, gamePlayerRepository, memberRepository, memberPositionRepository,
-                playerPositionService, CLOCK);
+        gameService = new GameService(gameRepository, gamePlayerRepository, new MemberReader(memberRepository),
+                memberPositionRepository, playerPositionService, CLOCK);
     }
 
     @Test

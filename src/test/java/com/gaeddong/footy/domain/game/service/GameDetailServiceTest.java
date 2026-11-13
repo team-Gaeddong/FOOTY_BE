@@ -39,7 +39,7 @@ class GameDetailServiceTest {
 
     @BeforeEach
     void setUp() {
-        gameDetailService = new GameDetailService(gameRepository, gamePlayerRepository);
+        gameDetailService = new GameDetailService(new GameReader(gameRepository), gamePlayerRepository);
     }
 
     private static Member member(Long id, String nickname) {

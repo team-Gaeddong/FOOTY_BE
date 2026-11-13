@@ -7,6 +7,7 @@ import com.gaeddong.footy.domain.game.domain.repository.GamePlayerRepository;
 import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
 import com.gaeddong.footy.domain.game.domain.repository.PlayerPositionRepository;
 import com.gaeddong.footy.domain.game.exception.GameErrorCode;
+import com.gaeddong.footy.domain.game.service.GameReader;
 import com.gaeddong.footy.domain.lineup.domain.Lineup;
 import com.gaeddong.footy.domain.lineup.domain.LineupMethod;
 import com.gaeddong.footy.domain.lineup.domain.Team;
@@ -15,7 +16,7 @@ import com.gaeddong.footy.domain.lineup.domain.repository.LineupRepository;
 import com.gaeddong.footy.domain.lineup.domain.repository.TeamMemberRepository;
 import com.gaeddong.footy.domain.lineup.domain.repository.TeamRepository;
 import com.gaeddong.footy.domain.lineup.exception.LineupErrorCode;
-import com.gaeddong.footy.domain.lineup.service.LineupService.CreatedLineup;
+import com.gaeddong.footy.domain.lineup.service.LineupService.LineupDetail;
 import com.gaeddong.footy.domain.lineup.service.LineupService.ViewedLineup;
 import com.gaeddong.footy.domain.member.domain.Member;
 import com.gaeddong.footy.domain.member.domain.Position;
@@ -74,8 +75,8 @@ class LineupServiceTest {
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(NOW.atZone(SEOUL).toInstant(), SEOUL);
-        lineupService = new LineupService(gameRepository, gamePlayerRepository, playerPositionRepository,
-                lineupRepository, teamRepository, teamMemberRepository, clock);
+        lineupService = new LineupService(new GameReader(gameRepository), gamePlayerRepository,
+                playerPositionRepository, lineupRepository, teamRepository, teamMemberRepository, clock);
     }
 
     private static Member member(Long id) {
@@ -137,7 +138,7 @@ class LineupServiceTest {
         when(playerPositionRepository.findAllByGamePlayerIdInOrderByPriorityAsc(anyList())).thenReturn(List.of());
         givenSavesPassThrough();
 
-        CreatedLineup created = lineupService.create(HOST_ID, GAME_ID);
+        LineupDetail created = lineupService.create(HOST_ID, GAME_ID);
 
         // 9(p2) → A, 8(p5) → B, 7(p3) → A, 5(p1) → B, 3(p4) → A
         assertThat(created.teams()).hasSize(2);
@@ -178,7 +179,7 @@ class LineupServiceTest {
         when(playerPositionRepository.findAllByGamePlayerIdInOrderByPriorityAsc(anyList())).thenReturn(List.of());
         givenSavesPassThrough();
 
-        CreatedLineup created = lineupService.create(HOST_ID, GAME_ID);
+        LineupDetail created = lineupService.create(HOST_ID, GAME_ID);
 
         assertThat(created.teams().get(0).members().get(0).getGamePlayer()).isSameAs(early);
         assertThat(created.teams().get(1).members().get(0).getGamePlayer()).isSameAs(late);
@@ -194,10 +195,10 @@ class LineupServiceTest {
                 .thenReturn(List.of(position(withPositions, Position.GK, 1), position(withPositions, Position.DF, 2)));
         givenSavesPassThrough();
 
-        CreatedLineup created = lineupService.create(HOST_ID, GAME_ID);
+        LineupDetail created = lineupService.create(HOST_ID, GAME_ID);
 
         assertThat(created.teams())
-                .flatExtracting(LineupService.CreatedTeam::members)
+                .flatExtracting(LineupService.TeamDetail::members)
                 .extracting(member -> member.getGamePlayer().getId(), member -> member.getPosition())
                 .containsExactly(tuple(1L, Position.GK), tuple(2L, Position.FW));
     }
@@ -228,7 +229,7 @@ class LineupServiceTest {
         when(playerPositionRepository.findAllByGamePlayerIdInOrderByPriorityAsc(anyList())).thenReturn(List.of());
         givenSavesPassThrough();
 
-        CreatedLineup created = lineupService.create(HOST_ID, GAME_ID);
+        LineupDetail created = lineupService.create(HOST_ID, GAME_ID);
 
         // 선발 9(p2), 8(p5), 7(p3) / 후보 5(p1), 3(p4)
         assertThat(List.of(p2, p5, p3)).noneMatch(GamePlayer::isSubstitute);

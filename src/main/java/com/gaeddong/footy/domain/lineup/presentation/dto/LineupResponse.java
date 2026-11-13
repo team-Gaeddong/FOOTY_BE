@@ -5,8 +5,8 @@ import com.gaeddong.footy.domain.lineup.domain.Lineup;
 import com.gaeddong.footy.domain.lineup.domain.LineupMethod;
 import com.gaeddong.footy.domain.lineup.domain.Team;
 import com.gaeddong.footy.domain.lineup.domain.TeamMember;
-import com.gaeddong.footy.domain.lineup.service.LineupService.CreatedLineup;
-import com.gaeddong.footy.domain.lineup.service.LineupService.CreatedTeam;
+import com.gaeddong.footy.domain.lineup.service.LineupService.LineupDetail;
+import com.gaeddong.footy.domain.lineup.service.LineupService.TeamDetail;
 import com.gaeddong.footy.domain.member.domain.Position;
 
 import java.util.List;
@@ -18,30 +18,31 @@ public record LineupResponse(
         boolean isConfirmed,
         List<TeamResponse> teams
 ) {
-    public static LineupResponse from(CreatedLineup created) {
-        return of(created, true);
+    // 파티장에게 주는 응답이다. 실력을 그대로 내린다
+    public static LineupResponse from(LineupDetail detail) {
+        return of(detail, true);
     }
 
     // skillVisible이 false면 실력(skillLevel, totalSkill)을 null로 내린다(D-20·D-24)
-    public static LineupResponse of(CreatedLineup created, boolean skillVisible) {
-        Lineup lineup = created.lineup();
+    public static LineupResponse of(LineupDetail detail, boolean skillVisible) {
+        Lineup lineup = detail.lineup();
         return new LineupResponse(
                 lineup.getId(),
                 lineup.getVersion(),
                 lineup.getMethod(),
                 lineup.isConfirmed(),
-                created.teams().stream().map(team -> TeamResponse.of(team, skillVisible)).toList()
+                detail.teams().stream().map(team -> TeamResponse.of(team, skillVisible)).toList()
         );
     }
 
     public record TeamResponse(Long teamId, String name, Integer totalSkill, List<TeamMemberResponse> members) {
-        static TeamResponse of(CreatedTeam created, boolean skillVisible) {
-            Team team = created.team();
+        static TeamResponse of(TeamDetail detail, boolean skillVisible) {
+            Team team = detail.team();
             return new TeamResponse(
                     team.getId(),
                     team.getName(),
                     skillVisible ? team.getTotalSkill() : null,
-                    created.members().stream().map(member -> TeamMemberResponse.of(member, skillVisible)).toList()
+                    detail.members().stream().map(member -> TeamMemberResponse.of(member, skillVisible)).toList()
             );
         }
     }

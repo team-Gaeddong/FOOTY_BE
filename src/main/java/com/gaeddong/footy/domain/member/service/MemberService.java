@@ -5,7 +5,6 @@ import com.gaeddong.footy.domain.member.domain.MemberPosition;
 import com.gaeddong.footy.domain.member.domain.Position;
 import com.gaeddong.footy.domain.member.domain.PositionPriorities;
 import com.gaeddong.footy.domain.member.domain.repository.MemberPositionRepository;
-import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
 import com.gaeddong.footy.domain.member.presentation.dto.MyProfileResponse;
 import com.gaeddong.footy.global.error.FootyException;
@@ -24,7 +23,7 @@ public class MemberService {
     private static final int NICKNAME_MIN_LENGTH = 2;
     private static final int NICKNAME_MAX_LENGTH = 10;
 
-    private final MemberRepository memberRepository;
+    private final MemberReader memberReader;
     private final MemberPositionRepository memberPositionRepository;
     private final Clock clock;
 
@@ -34,18 +33,18 @@ public class MemberService {
      */
     @Transactional
     public void completeOnboarding(Long memberId, String nickname) {
-        String trimmed = validateNickname(nickname);
-        Member member = findActiveMember(memberId);
+        String trimmedNickname = validateNickname(nickname);
+        Member member = memberReader.getActiveMember(memberId);
         if (member.isOnboarded()) {
             throw new FootyException(MemberErrorCode.ALREADY_ONBOARDED);
         }
-        member.completeOnboarding(trimmed);
+        member.completeOnboarding(trimmedNickname);
     }
 
     // 탈퇴한 회원은 없는 회원으로 본다
     @Transactional(readOnly = true)
     public MyProfileResponse getMyProfile(Long memberId) {
-        Member member = findActiveMember(memberId);
+        Member member = memberReader.getActiveMember(memberId);
         return MyProfileResponse.of(member, memberPositionRepository.findAllByMemberIdOrderByPriorityAsc(memberId));
     }
 
@@ -55,14 +54,10 @@ public class MemberService {
     @Transactional
     public void updatePositions(Long memberId, List<Position> positions) {
         PositionPriorities priorities = new PositionPriorities(positions);
-        Member member = findActiveMember(memberId);
+        Member member = memberReader.getActiveMember(memberId);
 
         memberPositionRepository.deleteAllByMemberId(memberId);
-        memberPositionRepository.saveAll(priorities.mapWithPriority((position, priority) -> MemberPosition.builder()
-                .member(member)
-                .position(position)
-                .priority(priority)
-                .build()));
+        memberPositionRepository.saveAll(MemberPosition.allOf(member, priorities));
     }
 
     /**
@@ -70,16 +65,11 @@ public class MemberService {
      */
     @Transactional
     public void withdraw(Long memberId) {
-        Member member = findActiveMember(memberId);
+        Member member = memberReader.getActiveMember(memberId);
         member.withdraw(LocalDateTime.now(clock));
     }
 
-    private Member findActiveMember(Long memberId) {
-        return memberRepository.findById(memberId)
-                .filter(found -> !found.isDeleted())
-                .orElseThrow(() -> new FootyException(MemberErrorCode.MEMBER_NOT_FOUND));
-    }
-
+    // 길이는 앞뒤 공백을 뺀 뒤 코드 포인트 수로 센다(char 수가 아니다)
     private String validateNickname(String nickname) {
         if (nickname == null) {
             throw new FootyException(MemberErrorCode.INVALID_NICKNAME);

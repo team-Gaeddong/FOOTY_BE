@@ -7,13 +7,10 @@ import com.gaeddong.footy.domain.balance.domain.repository.BalanceReviewReasonRe
 import com.gaeddong.footy.domain.balance.domain.repository.BalanceReviewRepository;
 import com.gaeddong.footy.domain.balance.exception.BalanceErrorCode;
 import com.gaeddong.footy.domain.game.domain.Game;
-import com.gaeddong.footy.domain.game.domain.GameStatus;
 import com.gaeddong.footy.domain.game.domain.repository.GamePlayerRepository;
-import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
-import com.gaeddong.footy.domain.game.exception.GameErrorCode;
+import com.gaeddong.footy.domain.game.service.GameReader;
 import com.gaeddong.footy.domain.member.domain.Member;
-import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
-import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
+import com.gaeddong.footy.domain.member.service.MemberReader;
 import com.gaeddong.footy.global.error.FootyException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -29,46 +26,32 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BalanceReviewService {
 
-    private final MemberRepository memberRepository;
-    private final GameRepository gameRepository;
+    private final MemberReader memberReader;
+    private final GameReader gameReader;
     private final GamePlayerRepository gamePlayerRepository;
     private final BalanceReviewRepository balanceReviewRepository;
     private final BalanceReviewReasonRepository balanceReviewReasonRepository;
     private final Clock clock;
 
+    /**
+     * 경기에 참가한 회원이 종료된 경기의 밸런스를 한 번 평가한다(D-28).
+     */
     @Transactional
     public CreatedReview create(Long writerId, Long gameId, int score, List<BalanceReason> reasons, String comment) {
-        List<BalanceReason> selected = reasons == null ? List.of() : reasons;
-        if (new HashSet<>(selected).size() != selected.size()) {
-            throw new FootyException(BalanceErrorCode.DUPLICATE_REASON);
-        }
-        // 탈퇴한 회원은 없는 회원으로 본다(D-16)
-        Member writer = memberRepository.findById(writerId)
-                .filter(found -> !found.isDeleted())
-                .orElseThrow(() -> new FootyException(MemberErrorCode.MEMBER_NOT_FOUND));
-        Game game = gameRepository.findById(gameId)
-                .filter(found -> !found.isDeleted())
-                .orElseThrow(() -> new FootyException(GameErrorCode.GAME_NOT_FOUND));
-        if (!gamePlayerRepository.existsByGameIdAndMemberId(gameId, writerId)) {
-            throw new FootyException(BalanceErrorCode.NOT_GAME_PLAYER);
-        }
-        if (game.getStatus() != GameStatus.FINISHED) {
-            throw new FootyException(BalanceErrorCode.GAME_NOT_FINISHED);
-        }
-        if (balanceReviewRepository.existsByGameIdAndWriterId(gameId, writerId)) {
-            throw new FootyException(BalanceErrorCode.ALREADY_REVIEWED);
-        }
+        List<BalanceReason> selectedReasons = withoutDuplicates(reasons);
+        Member writer = memberReader.getActiveMember(writerId);
+        Game game = gameReader.getGame(gameId);
+        validateReviewable(game, writerId);
 
-        BalanceReview review = save(BalanceReview.builder()
+        BalanceReview review = saveNewReview(BalanceReview.builder()
                 .game(game)
                 .writer(writer)
                 .score(score)
-                // 공백만 입력한 의견은 남기지 않는다(D-28)
-                .comment(comment == null || comment.isBlank() ? null : comment)
+                .comment(blankToNull(comment))
                 .createdAt(LocalDateTime.now(clock))
                 .build());
         List<BalanceReviewReason> savedReasons = balanceReviewReasonRepository.saveAll(
-                selected.stream()
+                selectedReasons.stream()
                         .map(reason -> BalanceReviewReason.builder()
                                 .balanceReview(review)
                                 .reason(reason)
@@ -77,8 +60,34 @@ public class BalanceReviewService {
         return new CreatedReview(review, savedReasons);
     }
 
+    // 사유는 선택 항목이라 생략하면 빈 목록으로 본다
+    private List<BalanceReason> withoutDuplicates(List<BalanceReason> reasons) {
+        List<BalanceReason> selected = reasons == null ? List.of() : reasons;
+        if (new HashSet<>(selected).size() != selected.size()) {
+            throw new FootyException(BalanceErrorCode.DUPLICATE_REASON);
+        }
+        return selected;
+    }
+
+    private void validateReviewable(Game game, Long writerId) {
+        if (!gamePlayerRepository.existsByGameIdAndMemberId(game.getId(), writerId)) {
+            throw new FootyException(BalanceErrorCode.NOT_GAME_PLAYER);
+        }
+        if (!game.isFinished()) {
+            throw new FootyException(BalanceErrorCode.GAME_NOT_FINISHED);
+        }
+        if (balanceReviewRepository.existsByGameIdAndWriterId(game.getId(), writerId)) {
+            throw new FootyException(BalanceErrorCode.ALREADY_REVIEWED);
+        }
+    }
+
+    // 공백만 입력한 의견은 남기지 않는다(D-28)
+    private String blankToNull(String comment) {
+        return comment == null || comment.isBlank() ? null : comment;
+    }
+
     // 동시에 작성하면 사전 확인을 통과해도 uk_balance_review에 걸린다
-    private BalanceReview save(BalanceReview review) {
+    private BalanceReview saveNewReview(BalanceReview review) {
         try {
             return balanceReviewRepository.saveAndFlush(review);
         } catch (DataIntegrityViolationException e) {

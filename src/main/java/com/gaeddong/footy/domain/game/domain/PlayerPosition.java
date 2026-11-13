@@ -1,6 +1,7 @@
 package com.gaeddong.footy.domain.game.domain;
 
 import com.gaeddong.footy.domain.member.domain.Position;
+import com.gaeddong.footy.domain.member.domain.PositionPriorities;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -18,6 +19,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 /**
  * 경기별 선수 희망 포지션. 스키마는 docs/erd/footy_erd.sql의 player_position을 따른다.
@@ -45,4 +48,15 @@ public class PlayerPosition {
 
     @Column(name = "priority", nullable = false)
     private int priority;
+
+    /**
+     * 순서가 곧 우선순위인 포지션 목록을 선수의 희망 포지션 행들로 바꾼다(D-13).
+     */
+    public static List<PlayerPosition> allOf(GamePlayer gamePlayer, PositionPriorities priorities) {
+        return priorities.mapWithPriority((position, priority) -> PlayerPosition.builder()
+                .gamePlayer(gamePlayer)
+                .position(position)
+                .priority(priority)
+                .build());
+    }
 }

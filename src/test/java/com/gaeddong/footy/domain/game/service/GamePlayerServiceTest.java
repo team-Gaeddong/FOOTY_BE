@@ -43,7 +43,7 @@ class GamePlayerServiceTest {
 
     @BeforeEach
     void setUp() {
-        gamePlayerService = new GamePlayerService(gameRepository, gamePlayerRepository);
+        gamePlayerService = new GamePlayerService(new GameReader(gameRepository), gamePlayerRepository);
 
         Member host = Member.builder()
                 .email("host@example.com")

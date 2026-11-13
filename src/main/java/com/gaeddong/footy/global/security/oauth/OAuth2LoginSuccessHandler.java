@@ -10,7 +10,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 
@@ -22,6 +21,8 @@ import java.io.IOException;
 @Component
 @RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
+
+    private static final String CODE_PARAM = "code";
 
     private final AuthService authService;
     private final AuthProperties authProperties;
@@ -35,17 +36,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
             code = authService.issueLoginCode(user.getSubject(), user.getEmail());
         } catch (RuntimeException e) {
             log.error("Google 로그인 후 로그인 코드 발급 실패", e);
-            redirect(response, "error", OAuth2LoginFailureHandler.LOGIN_FAILED);
+            response.sendRedirect(authProperties.redirectUriWith(
+                    OAuth2LoginFailureHandler.ERROR_PARAM, OAuth2LoginFailureHandler.LOGIN_FAILED));
             return;
         }
-        redirect(response, "code", code);
-    }
-
-    private void redirect(HttpServletResponse response, String name, String value) throws IOException {
-        String redirectUri = UriComponentsBuilder.fromUriString(authProperties.redirectUri())
-                .queryParam(name, value)
-                .build()
-                .toUriString();
-        response.sendRedirect(redirectUri);
+        response.sendRedirect(authProperties.redirectUriWith(CODE_PARAM, code));
     }
 }

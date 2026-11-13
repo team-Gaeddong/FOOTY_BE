@@ -10,5 +10,4 @@ public interface LineupRepository extends JpaRepository<Lineup, Long> {
     boolean existsByGameId(Long gameId);
 
     Optional<Lineup> findFirstByGameIdOrderByVersionDesc(Long gameId);
-    Optional<Lineup> findByGameId(Long gameId);
 }

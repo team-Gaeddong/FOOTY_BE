@@ -79,4 +79,17 @@ public class Game {
     public void confirm() {
         this.status = GameStatus.CONFIRMED;
     }
+
+    // 경기 생성자가 파티장이다
+    public boolean isHostedBy(Long memberId) {
+        return host.getId().equals(memberId);
+    }
+
+    public boolean isRecruiting() {
+        return status == GameStatus.RECRUITING;
+    }
+
+    public boolean isFinished() {
+        return status == GameStatus.FINISHED;
+    }
 }

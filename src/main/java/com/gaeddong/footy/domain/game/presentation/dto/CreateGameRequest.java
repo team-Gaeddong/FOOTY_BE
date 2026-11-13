@@ -14,9 +14,12 @@ public record CreateGameRequest(
         @NotNull @Positive Integer maxPlayers,
         Integer teamCount
 ) {
+    private static final int DEFAULT_TEAM_COUNT = 2;
+
+    // 팀 수를 생략하면 2팀이다(D-14)
     public CreateGameRequest {
         if (teamCount == null) {
-            teamCount = 2;
+            teamCount = DEFAULT_TEAM_COUNT;
         }
     }
 }

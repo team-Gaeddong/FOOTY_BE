@@ -56,10 +56,18 @@ public class JwtProvider {
     }
 
     /**
-     * 만료까지 남은 시간. 이미 만료됐으면 0이다.
+     * 만료까지 남은 시간. 이미 만료됐으면 0이다. 서명·형식이 잘못된 토큰은 거부한다.
      */
     public Duration getRemainingTime(String token) {
-        Instant expiration = parse(token).getExpiration().toInstant();
+        Instant expiration;
+        try {
+            expiration = parse(token).getExpiration().toInstant();
+        } catch (FootyException e) {
+            if (e.getErrorCode() == AuthErrorCode.EXPIRED_TOKEN) {
+                return Duration.ZERO;
+            }
+            throw e;
+        }
         Duration remaining = Duration.between(clock.instant(), expiration);
         return remaining.isNegative() ? Duration.ZERO : remaining;
     }
