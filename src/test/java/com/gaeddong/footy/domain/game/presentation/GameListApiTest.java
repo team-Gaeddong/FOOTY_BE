@@ -120,6 +120,23 @@ class GameListApiTest {
                 .andExpect(jsonPath("$.code").value("GLOBAL_400_1"));
     }
 
+    @Test
+    void 숫자가_아닌_페이지_값이나_경기_ID는_400이다() throws Exception {
+        Member host = saveHost();
+        String token = jwtProvider.createAccessToken(host.getId());
+
+        mockMvc.perform(get("/games")
+                        .queryParam("page", "abc")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("GLOBAL_400_1"));
+
+        mockMvc.perform(get("/games/{gameId}", "abc")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("GLOBAL_400_1"));
+    }
+
     private Member saveHost() {
         return saveHost("host@example.com", "google-host");
     }
