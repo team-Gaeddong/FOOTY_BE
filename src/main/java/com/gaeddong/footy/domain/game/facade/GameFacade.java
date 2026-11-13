@@ -60,13 +60,7 @@ public class GameFacade {
     }
 
     public void updateSkillLevels(Long memberId, Long gameId, UpdateSkillLevelsRequest request) {
-        Map<Long, Integer> skillLevels = new HashMap<>();
-        for (UpdateSkillLevelsRequest.PlayerSkillLevel player : request.players()) {
-            if (skillLevels.put(player.gamePlayerId(), player.skillLevel()) != null) {
-                throw new FootyException(GameErrorCode.DUPLICATE_GAME_PLAYER);
-            }
-        }
-        gamePlayerService.updateSkillLevels(memberId, gameId, skillLevels);
+        gamePlayerService.updateSkillLevels(memberId, gameId, toSkillLevelsByPlayerId(request));
     }
 
     public CreateGameResponse rematch(Long requesterId, Long sourceGameId, RematchGameRequest request) {
@@ -85,5 +79,16 @@ public class GameFacade {
 
     public ListGamePlayersResponse listPlayers(Long memberId, Long gameId) {
         return ListGamePlayersResponse.from(playerListService.list(memberId, gameId));
+    }
+
+    // 같은 선수가 두 번 오면 어느 점수를 쓸지 알 수 없으므로 거부한다
+    private Map<Long, Integer> toSkillLevelsByPlayerId(UpdateSkillLevelsRequest request) {
+        Map<Long, Integer> skillLevels = new HashMap<>();
+        for (UpdateSkillLevelsRequest.PlayerSkillLevel player : request.players()) {
+            if (skillLevels.put(player.gamePlayerId(), player.skillLevel()) != null) {
+                throw new FootyException(GameErrorCode.DUPLICATE_GAME_PLAYER);
+            }
+        }
+        return skillLevels;
     }
 }

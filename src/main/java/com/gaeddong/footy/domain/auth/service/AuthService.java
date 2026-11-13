@@ -56,9 +56,8 @@ public class AuthService {
         requireText(code);
         Long memberId = loginCodeRepository.consume(code)
                 .orElseThrow(() -> new FootyException(AuthErrorCode.INVALID_LOGIN_CODE));
-        Member member = memberRepository.findById(memberId)
-                .filter(found -> !found.isDeleted())
-                .orElseThrow(() -> new FootyException(AuthErrorCode.INVALID_LOGIN_CODE));
+        // 코드를 받은 뒤 탈퇴했으면 그 코드는 쓸 수 없다
+        Member member = findActiveMember(memberId, AuthErrorCode.INVALID_LOGIN_CODE);
         return issueTokens(member);
     }
 
@@ -70,9 +69,7 @@ public class AuthService {
     public TokenResponse reissue(String refreshToken) {
         requireText(refreshToken);
         Long memberId = jwtProvider.getMemberId(refreshToken, TokenType.REFRESH);
-        Member member = memberRepository.findById(memberId)
-                .filter(found -> !found.isDeleted())
-                .orElseThrow(() -> new FootyException(AuthErrorCode.INVALID_REFRESH_TOKEN));
+        Member member = findActiveMember(memberId, AuthErrorCode.INVALID_REFRESH_TOKEN);
 
         String newAccessToken = jwtProvider.createAccessToken(memberId);
         String newRefreshToken = jwtProvider.createRefreshToken(memberId);
@@ -84,6 +81,9 @@ public class AuthService {
         return new TokenResponse(newAccessToken, newRefreshToken, member.isOnboarded());
     }
 
+    /**
+     * refresh 토큰을 지우고, access 토큰은 남은 만료 시간만큼 블랙리스트에 둔다(D-05b).
+     */
     public void logout(Long memberId, String accessToken) {
         refreshTokenRepository.deleteByMemberId(memberId);
         Duration remaining = jwtProvider.getRemainingTime(accessToken);
@@ -97,6 +97,13 @@ public class AuthService {
         String refreshToken = jwtProvider.createRefreshToken(member.getId());
         refreshTokenRepository.save(member.getId(), refreshToken, jwtProvider.getRefreshTokenExpiration());
         return new TokenResponse(accessToken, refreshToken, member.isOnboarded());
+    }
+
+    // 없는 회원과 탈퇴한 회원을 구분하지 않고, 인증 흐름마다 정해진 에러로 알린다
+    private Member findActiveMember(Long memberId, AuthErrorCode errorCode) {
+        return memberRepository.findById(memberId)
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new FootyException(errorCode));
     }
 
     private void requireText(String value) {
