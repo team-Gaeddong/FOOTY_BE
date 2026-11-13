@@ -18,4 +18,7 @@ public interface GamePlayerRepository extends JpaRepository<GamePlayer, Long> {
     boolean existsByGameIdAndMemberId(Long gameId, Long memberId);
 
     long countByGameId(Long gameId);
+
+    // 밸런스를 작성할 수 있는 선수(탈퇴하지 않은 회원) 수
+    long countByGameIdAndMemberDeletedFalse(Long gameId);
 }
