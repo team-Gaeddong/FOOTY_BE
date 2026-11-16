@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -37,7 +38,8 @@ class MemberServiceTest {
 
     private final MemberRepository memberRepository = mock(MemberRepository.class);
     private final MemberPositionRepository memberPositionRepository = mock(MemberPositionRepository.class);
-    private final MemberService memberService = new MemberService(new MemberReader(memberRepository), memberPositionRepository,
+    private final MemberService memberService = new MemberService(
+            new MemberReader(memberRepository), memberRepository, memberPositionRepository,
             Clock.fixed(NOW.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault()));
 
     private static Member newMember() {
@@ -110,6 +112,32 @@ class MemberServiceTest {
                 .isInstanceOf(FootyException.class)
                 .extracting("errorCode").isEqualTo(MemberErrorCode.ALREADY_ONBOARDED);
         assertThat(member.getNickname()).isEqualTo("태균");
+    }
+
+    @Test
+    void 이미_쓰는_닉네임이면_409이고_온보딩하지_않는다() {
+        Member member = newMember();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+        given(memberRepository.existsByNickname("태균")).willReturn(true);
+
+        // 앞뒤 공백을 제거한 값으로 비교한다
+        assertThatThrownBy(() -> memberService.completeOnboarding(1L, "  태균  "))
+                .isInstanceOf(FootyException.class)
+                .extracting("errorCode").isEqualTo(MemberErrorCode.NICKNAME_TAKEN);
+        assertThat(member.isOnboarded()).isFalse();
+        assertThat(member.getNickname()).isNull();
+    }
+
+    @Test
+    void 동시에_같은_닉네임으로_온보딩해_제약에_걸리면_409() {
+        Member member = newMember();
+        given(memberRepository.findById(1L)).willReturn(Optional.of(member));
+        given(memberRepository.existsByNickname("태균")).willReturn(false);
+        given(memberRepository.saveAndFlush(member)).willThrow(new DataIntegrityViolationException("uk_member_nickname"));
+
+        assertThatThrownBy(() -> memberService.completeOnboarding(1L, "태균"))
+                .isInstanceOf(FootyException.class)
+                .extracting("errorCode").isEqualTo(MemberErrorCode.NICKNAME_TAKEN);
     }
 
     @Test
