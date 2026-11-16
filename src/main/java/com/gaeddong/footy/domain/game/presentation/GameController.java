@@ -52,6 +52,11 @@ public class GameController {
         return gameFacade.get(memberId, gameId);
     }
 
+    @PatchMapping("/{gameId}/finish")
+    public GameDetailResponse finish(@AuthenticationPrincipal Long memberId, @PathVariable Long gameId) {
+        return gameFacade.finish(memberId, gameId);
+    }
+
     @GetMapping("/{gameId}/players")
     public ListGamePlayersResponse listPlayers(@AuthenticationPrincipal Long memberId, @PathVariable Long gameId) {
         return gameFacade.listPlayers(memberId, gameId);
