@@ -80,6 +80,10 @@ public class Game {
         this.status = GameStatus.CONFIRMED;
     }
 
+    public void finish() {
+        this.status = GameStatus.FINISHED;
+    }
+
     // 경기 생성자가 파티장이다
     public boolean isHostedBy(Long memberId) {
         return host.getId().equals(memberId);
@@ -87,6 +91,10 @@ public class Game {
 
     public boolean isRecruiting() {
         return status == GameStatus.RECRUITING;
+    }
+
+    public boolean isConfirmed() {
+        return status == GameStatus.CONFIRMED;
     }
 
     public boolean isFinished() {
