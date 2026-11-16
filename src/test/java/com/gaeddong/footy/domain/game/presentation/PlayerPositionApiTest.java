@@ -67,7 +67,7 @@ class PlayerPositionApiTest {
                 .provider(Provider.GOOGLE)
                 .providerId(providerId)
                 .build();
-        member.completeOnboarding("회원");
+        member.completeOnboarding("회원-" + providerId);
         return memberRepository.saveAndFlush(member);
     }
 

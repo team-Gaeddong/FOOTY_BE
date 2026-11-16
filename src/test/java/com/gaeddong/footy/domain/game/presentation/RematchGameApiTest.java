@@ -163,7 +163,7 @@ class RematchGameApiTest {
                 .provider(Provider.GOOGLE)
                 .providerId(providerId)
                 .build();
-        member.completeOnboarding("호스트");
+        member.completeOnboarding("호스트-" + providerId);
         return memberRepository.saveAndFlush(member);
     }
 
