@@ -70,6 +70,20 @@ class MemberApiTest {
                 .build());
     }
 
+    // 닉네임을 이미 쓰고 있는 다른 회원
+    private void saveOtherMember(String nickname, boolean withdrawn) {
+        Member other = Member.builder()
+                .email("other@gmail.com")
+                .provider(Provider.GOOGLE)
+                .providerId("google-sub-other")
+                .build();
+        other.completeOnboarding(nickname);
+        if (withdrawn) {
+            other.withdraw(LocalDateTime.of(2026, 11, 16, 12, 0));
+        }
+        memberRepository.saveAndFlush(other);
+    }
+
     private void savePosition(Member member, Position position, int priority) {
         memberPositionRepository.save(MemberPosition.builder()
                 .member(member)
@@ -141,6 +155,48 @@ class MemberApiTest {
                         .content("{\"nickname\":\"다른닉네임\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("MEMBER_409_1"));
+    }
+
+    @Test
+    void 이미_쓰는_닉네임으로_온보딩하면_409() throws Exception {
+        saveOtherMember("태균", false);
+        Member member = saveMember();
+
+        mockMvc.perform(patch("/members/me/onboarding")
+                        .header("Authorization", bearer(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\":\" 태균 \"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("MEMBER_409_2"));
+
+        Member found = memberRepository.findById(member.getId()).orElseThrow();
+        assertThat(found.isOnboarded()).isFalse();
+        assertThat(found.getNickname()).isNull();
+    }
+
+    @Test
+    void 탈퇴한_회원의_닉네임으로_온보딩해도_409() throws Exception {
+        saveOtherMember("태균", true);
+        Member member = saveMember();
+
+        mockMvc.perform(patch("/members/me/onboarding")
+                        .header("Authorization", bearer(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\":\"태균\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("MEMBER_409_2"));
+    }
+
+    @Test
+    void 닉네임이_다르면_다른_회원이_있어도_온보딩한다() throws Exception {
+        saveOtherMember("태균", false);
+        Member member = saveMember();
+
+        mockMvc.perform(patch("/members/me/onboarding")
+                        .header("Authorization", bearer(member))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\":\"효오\"}"))
+                .andExpect(status().isNoContent());
     }
 
     @Test
