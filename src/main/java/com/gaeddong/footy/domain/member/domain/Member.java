@@ -34,7 +34,8 @@ import java.time.LocalDateTime;
         name = "member",
         uniqueConstraints = {
                 @UniqueConstraint(name = "uk_member_email", columnNames = "email"),
-                @UniqueConstraint(name = "uk_member_provider", columnNames = {"provider", "provider_id"})
+                @UniqueConstraint(name = "uk_member_provider", columnNames = {"provider", "provider_id"}),
+                @UniqueConstraint(name = "uk_member_nickname", columnNames = "nickname")
         }
 )
 @EntityListeners(AuditingEntityListener.class)

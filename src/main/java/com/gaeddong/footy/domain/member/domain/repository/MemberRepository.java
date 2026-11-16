@@ -12,5 +12,8 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     boolean existsByEmail(String email);
 
+    // 탈퇴한 회원의 닉네임도 포함한다(D-05e)
+    boolean existsByNickname(String nickname);
+
     boolean existsByIdAndOnboardedFalse(Long id);
 }
