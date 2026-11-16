@@ -174,7 +174,7 @@ class SkillLevelApiTest {
                 .provider(Provider.GOOGLE)
                 .providerId(providerId)
                 .build();
-        saved.completeOnboarding("회원");
+        saved.completeOnboarding("회원-" + providerId);
         return memberRepository.saveAndFlush(saved);
     }
 }

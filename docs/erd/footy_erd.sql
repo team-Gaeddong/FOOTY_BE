@@ -1,6 +1,7 @@
 -- FOOTY ERD 스냅샷
 -- 원본: ERD Cloud "footy" 다이어그램 (2026-10-14 Import한 DDL, 2026-10-19 member 변경 반영)
 -- 2026-11-05 balance_review_reason 추가·score 범위 1~10 (D-28, ERD Cloud 반영 완료).
+-- 2026-11-16 uk_member_nickname 추가 (D-05e 닉네임 중복 불가, 기준은 constraints.md).
 -- 원본과 다르면 원본이 우선이다. 차이는 docs/harness/decisions.md C-12, C-15 참고.
 -- 컬럼·NULL·DEFAULT·FK는 원본 Export와 일치.
 -- UNIQUE·AUTO_INCREMENT의 기준은 docs/erd/constraints.md (원본 ERD Cloud에 표기 불가).
@@ -19,7 +20,8 @@ CREATE TABLE member (
   is_onboarded TINYINT(1) NOT NULL DEFAULT 0 COMMENT '온보딩 완료 여부',
   PRIMARY KEY (member_id),
   UNIQUE KEY uk_member_email (email),
-  UNIQUE KEY uk_member_provider (provider, provider_id)
+  UNIQUE KEY uk_member_provider (provider, provider_id),
+  UNIQUE KEY uk_member_nickname (nickname)
 ) COMMENT '회원';
 
 CREATE TABLE member_position (

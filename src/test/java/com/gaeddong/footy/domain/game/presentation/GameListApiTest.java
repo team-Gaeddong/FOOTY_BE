@@ -147,7 +147,7 @@ class GameListApiTest {
                 .provider(Provider.GOOGLE)
                 .providerId(providerId)
                 .build();
-        host.completeOnboarding("호스트");
+        host.completeOnboarding("호스트-" + providerId);
         return memberRepository.saveAndFlush(host);
     }
 

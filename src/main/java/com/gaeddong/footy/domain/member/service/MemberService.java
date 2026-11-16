@@ -5,10 +5,12 @@ import com.gaeddong.footy.domain.member.domain.MemberPosition;
 import com.gaeddong.footy.domain.member.domain.Position;
 import com.gaeddong.footy.domain.member.domain.PositionPriorities;
 import com.gaeddong.footy.domain.member.domain.repository.MemberPositionRepository;
+import com.gaeddong.footy.domain.member.domain.repository.MemberRepository;
 import com.gaeddong.footy.domain.member.exception.MemberErrorCode;
 import com.gaeddong.footy.domain.member.presentation.dto.MyProfileResponse;
 import com.gaeddong.footy.global.error.FootyException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,12 +26,13 @@ public class MemberService {
     private static final int NICKNAME_MAX_LENGTH = 10;
 
     private final MemberReader memberReader;
+    private final MemberRepository memberRepository;
     private final MemberPositionRepository memberPositionRepository;
     private final Clock clock;
 
     /**
      * 회원가입은 첫 Google 로그인 뒤의 온보딩이다(D-05c). Sprint 1은 닉네임만 받는다(D-05e).
-     * 닉네임은 앞뒤 공백을 제거한 뒤 2~10자이며 중복을 허용한다.
+     * 닉네임은 앞뒤 공백을 제거한 뒤 2~10자이며 다른 회원(탈퇴한 회원 포함)과 겹칠 수 없다.
      */
     @Transactional
     public void completeOnboarding(Long memberId, String nickname) {
@@ -38,7 +41,20 @@ public class MemberService {
         if (member.isOnboarded()) {
             throw new FootyException(MemberErrorCode.ALREADY_ONBOARDED);
         }
+        if (memberRepository.existsByNickname(trimmedNickname)) {
+            throw new FootyException(MemberErrorCode.NICKNAME_TAKEN);
+        }
         member.completeOnboarding(trimmedNickname);
+        flushNickname(member);
+    }
+
+    // 동시에 같은 닉네임으로 온보딩하면 사전 확인을 통과해도 uk_member_nickname에 걸린다
+    private void flushNickname(Member member) {
+        try {
+            memberRepository.saveAndFlush(member);
+        } catch (DataIntegrityViolationException e) {
+            throw new FootyException(MemberErrorCode.NICKNAME_TAKEN);
+        }
     }
 
     // 탈퇴한 회원은 없는 회원으로 본다
