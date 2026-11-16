@@ -1,6 +1,5 @@
 package com.gaeddong.footy.domain.mvp.service;
 
-import com.gaeddong.footy.domain.game.domain.Game;
 import com.gaeddong.footy.domain.game.domain.GamePlayer;
 import com.gaeddong.footy.domain.game.domain.repository.GamePlayerRepository;
 import com.gaeddong.footy.domain.game.service.GameReader;
@@ -18,7 +17,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * MVP 투표 집계(D-31). 투표 중에도 현재 득표를 보여 주고, 누가 누구에게 투표했는지는 내보내지 않는다.
+ * MVP 투표 집계(D-31). 투표를 마친 회원에게만 현재 득표를 보여 주고, 누가 누구에게 투표했는지는 내보내지 않는다.
  */
 @Service
 @RequiredArgsConstructor
@@ -53,13 +52,26 @@ public class MvpResultService {
                 candidates);
     }
 
+    /**
+     * 요청자 본인의 투표 여부와 뽑은 선수. 투표하지 않았으면 gamePlayerId는 null이다.
+     */
+    @Transactional(readOnly = true)
+    public MyVote getMyVote(Long requesterId, Long gameId) {
+        gameReader.getGame(gameId);
+        return mvpVoteRepository.findByGameIdAndVoterId(gameId, requesterId)
+                .map(vote -> new MyVote(true, vote.getGamePlayer().getId()))
+                .orElseGet(() -> new MyVote(false, null));
+    }
+
+    // 투표는 참가 회원만 할 수 있으므로 투표 여부만 보면 참가자 확인도 된다
     private void validateReadable(Long requesterId, Long gameId) {
-        Game game = gameReader.getGame(gameId);
-        boolean readable = game.isHostedBy(requesterId)
-                || gamePlayerRepository.existsByGameIdAndMemberId(gameId, requesterId);
-        if (!readable) {
-            throw new FootyException(MvpErrorCode.NOT_GAME_PARTICIPANT);
+        gameReader.getGame(gameId);
+        if (!mvpVoteRepository.existsByGameIdAndVoterId(gameId, requesterId)) {
+            throw new FootyException(MvpErrorCode.NOT_VOTED);
         }
+    }
+
+    public record MyVote(boolean voted, Long gamePlayerId) {
     }
 
     public record Result(long requiredCount, long votedCount, List<Long> mvpGamePlayerIds, List<Candidate> candidates) {

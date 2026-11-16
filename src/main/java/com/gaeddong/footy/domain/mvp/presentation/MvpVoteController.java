@@ -4,6 +4,7 @@ import com.gaeddong.footy.domain.mvp.facade.MvpVoteFacade;
 import com.gaeddong.footy.domain.mvp.presentation.dto.CreateMvpVoteRequest;
 import com.gaeddong.footy.domain.mvp.presentation.dto.CreateMvpVoteResponse;
 import com.gaeddong.footy.domain.mvp.presentation.dto.MvpResultResponse;
+import com.gaeddong.footy.domain.mvp.presentation.dto.MyMvpVoteResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -36,5 +37,10 @@ public class MvpVoteController {
     @GetMapping("/result")
     public MvpResultResponse getResult(@AuthenticationPrincipal Long memberId, @PathVariable Long gameId) {
         return mvpVoteFacade.getResult(memberId, gameId);
+    }
+
+    @GetMapping("/me")
+    public MyMvpVoteResponse getMyVote(@AuthenticationPrincipal Long memberId, @PathVariable Long gameId) {
+        return mvpVoteFacade.getMyVote(memberId, gameId);
     }
 }
