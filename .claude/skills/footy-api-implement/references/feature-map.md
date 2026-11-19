@@ -25,7 +25,7 @@
 | 팀 확정 | Sprint 3 | 5 | 안세하 | lineup.is_confirmed | |
 | 다시 짜기 | Sprint 3 | 5~6 | 안세하 | lineup.version | 마음에 안 들면 조건 유지하고 재배정 |
 | 경기 저장 | Sprint 3 | 6 | 안세하 | lineup, (결과 컬럼 없음) | 해당 날짜의 팀 구성과 경기 결과 저장 |
-| 전술 배치도 이미지 저장 | Sprint 3 | 6 | 전재준 | lineup.image_url | |
+| 전술 배치도 이미지 저장 | Sprint 3 | 6 | 전재준 | lineup.image_url (미사용, D-32) | FE에서 PNG로 만들어 기기에 내려받기만 한다(#75) |
 | 경기 상세 조회 | Sprint 3 | 6 | 곽효오 | game 외 다수 | |
 | 경기 이후 밸런스 작성 | Sprint 4 | 7 | 곽효오 | balance_review | |
 | 경기 MVP | Sprint 4 | 7 | 곽효오 | mvp_vote | 경기 끝나고 오늘의 MVP 선택하게 하기 |
