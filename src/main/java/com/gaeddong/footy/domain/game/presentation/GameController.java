@@ -53,6 +53,11 @@ public class GameController {
         return gameFacade.get(memberId, gameId);
     }
 
+    @PatchMapping("/{gameId}/finish")
+    public GameDetailResponse finish(@AuthenticationPrincipal Long memberId, @PathVariable Long gameId) {
+        return gameFacade.finish(memberId, gameId);
+    }
+
     @DeleteMapping("/{gameId}")
     public ResponseEntity<Void> delete(@AuthenticationPrincipal Long memberId, @PathVariable Long gameId) {
         gameFacade.delete(memberId, gameId);

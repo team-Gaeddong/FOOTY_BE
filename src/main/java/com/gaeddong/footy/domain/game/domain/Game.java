@@ -80,6 +80,10 @@ public class Game {
         this.status = GameStatus.CONFIRMED;
     }
 
+    public void finish() {
+        this.status = GameStatus.FINISHED;
+    }
+
     // 소프트 삭제다. 삭제된 경기는 GameReader에서 없는 경기로 본다
     public void delete() {
         this.deleted = true;
@@ -92,6 +96,10 @@ public class Game {
 
     public boolean isRecruiting() {
         return status == GameStatus.RECRUITING;
+    }
+
+    public boolean isConfirmed() {
+        return status == GameStatus.CONFIRMED;
     }
 
     public boolean isFinished() {

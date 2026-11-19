@@ -14,6 +14,7 @@ import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequ
 import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
 import com.gaeddong.footy.domain.game.service.GameDeleteService;
 import com.gaeddong.footy.domain.game.service.GameDetailService;
+import com.gaeddong.footy.domain.game.service.GameFinishService;
 import com.gaeddong.footy.domain.game.service.GamePlayerService;
 import com.gaeddong.footy.domain.game.service.GameService;
 import com.gaeddong.footy.domain.game.service.PlayerJoinService;
@@ -39,6 +40,7 @@ public class GameFacade {
     private final PlayerJoinService playerJoinService;
     private final PlayerListService playerListService;
     private final GameDetailService gameDetailService;
+    private final GameFinishService gameFinishService;
     private final GameDeleteService gameDeleteService;
 
     public CreateGameResponse create(Long hostId, CreateGameRequest request) {
@@ -59,6 +61,12 @@ public class GameFacade {
 
     public GameDetailResponse get(Long memberId, Long gameId) {
         return GameDetailResponse.from(gameDetailService.get(memberId, gameId));
+    }
+
+    // 종료한 뒤 바뀐 상태를 경기 상세 형식(D-25)으로 돌려준다
+    public GameDetailResponse finish(Long memberId, Long gameId) {
+        gameFinishService.finish(memberId, gameId);
+        return get(memberId, gameId);
     }
 
     public void delete(Long memberId, Long gameId) {

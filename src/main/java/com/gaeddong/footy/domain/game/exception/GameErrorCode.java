@@ -19,7 +19,7 @@ public enum GameErrorCode implements ErrorCode {
     GAME_NOT_RECRUITING(HttpStatus.CONFLICT, "GAME_409_1", "모집 중인 경기에서만 할 수 있습니다."),
     GAME_NOT_FINISHED(HttpStatus.CONFLICT, "GAME_409_2", "종료된 경기만 재경기를 만들 수 있습니다."),
     ALREADY_JOINED(HttpStatus.CONFLICT, "GAME_409_3", "이미 참여한 경기입니다."),
-    // GAME_409_4는 경기 종료(PR #73)가 쓴다
+    GAME_NOT_CONFIRMED(HttpStatus.CONFLICT, "GAME_409_4", "팀이 확정된 경기만 종료할 수 있습니다."),
     FINISHED_GAME_NOT_DELETABLE(HttpStatus.CONFLICT, "GAME_409_5", "종료된 경기는 삭제할 수 없습니다.");
 
     private final HttpStatus status;
