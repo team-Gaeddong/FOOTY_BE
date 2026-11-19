@@ -14,7 +14,7 @@ public class GameFinishService {
     private final GameReader gameReader;
 
     /**
-     * 파티장이 팀 확정(CONFIRMED)된 경기를 종료한다(D-32).
+     * 파티장이 팀 확정(CONFIRMED)된 경기를 종료한다(D-34).
      * 종료한 경기에서만 밸런스 작성·MVP 투표·재경기 생성을 할 수 있다.
      */
     @Transactional

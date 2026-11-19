@@ -84,6 +84,11 @@ public class Game {
         this.status = GameStatus.FINISHED;
     }
 
+    // 소프트 삭제다. 삭제된 경기는 GameReader에서 없는 경기로 본다
+    public void delete() {
+        this.deleted = true;
+    }
+
     // 경기 생성자가 파티장이다
     public boolean isHostedBy(Long memberId) {
         return host.getId().equals(memberId);
