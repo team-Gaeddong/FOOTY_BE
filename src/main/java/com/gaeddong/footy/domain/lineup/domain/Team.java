@@ -48,4 +48,8 @@ public class Team {
     public void changeFormation(String formation) {
         this.formation = formation;
     }
+
+    public void changeTotalSkill(Integer totalSkill) {
+        this.totalSkill = totalSkill;
+    }
 }
