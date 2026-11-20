@@ -3,8 +3,10 @@ package com.gaeddong.footy.domain.lineup.facade;
 import com.gaeddong.footy.domain.lineup.exception.LineupErrorCode;
 import com.gaeddong.footy.domain.lineup.presentation.dto.LineupResponse;
 import com.gaeddong.footy.domain.lineup.presentation.dto.TacticResponse;
+import com.gaeddong.footy.domain.lineup.presentation.dto.UpdateLineupTeamsRequest;
 import com.gaeddong.footy.domain.lineup.presentation.dto.UpdateTacticRequest;
 import com.gaeddong.footy.domain.lineup.service.LineupService;
+import com.gaeddong.footy.domain.lineup.service.LineupService.TeamAssignment;
 import com.gaeddong.footy.domain.lineup.service.LineupService.ViewedLineup;
 import com.gaeddong.footy.domain.lineup.service.TacticService;
 import com.gaeddong.footy.domain.lineup.service.TacticService.Coordinate;
@@ -13,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -33,6 +36,14 @@ public class LineupFacade {
 
     public LineupResponse confirm(Long requesterId, Long gameId) {
         return LineupResponse.from(lineupService.confirm(requesterId, gameId));
+    }
+
+    // 파티장만 호출하므로 실력을 그대로 내린다
+    public LineupResponse updateTeams(Long requesterId, Long gameId, UpdateLineupTeamsRequest request) {
+        List<TeamAssignment> assignments = request.teams().stream()
+                .map(roster -> new TeamAssignment(roster.teamId(), roster.gamePlayerIds()))
+                .toList();
+        return LineupResponse.from(lineupService.updateTeams(requesterId, gameId, assignments));
     }
 
     public TacticResponse getTactic(Long gameId, Long teamId) {

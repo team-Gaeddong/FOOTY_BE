@@ -2,6 +2,8 @@ package com.gaeddong.footy.domain.lineup.presentation;
 
 import com.gaeddong.footy.domain.lineup.facade.LineupFacade;
 import com.gaeddong.footy.domain.lineup.presentation.dto.LineupResponse;
+import com.gaeddong.footy.domain.lineup.presentation.dto.UpdateLineupTeamsRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +12,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -28,6 +32,12 @@ public class LineupController {
     @GetMapping("/latest")
     public LineupResponse getLatest(@AuthenticationPrincipal Long memberId, @PathVariable Long gameId) {
         return lineupFacade.getLatest(memberId, gameId);
+    }
+
+    @PutMapping("/latest/teams")
+    public LineupResponse updateTeams(@AuthenticationPrincipal Long memberId, @PathVariable Long gameId,
+                                      @Valid @RequestBody UpdateLineupTeamsRequest request) {
+        return lineupFacade.updateTeams(memberId, gameId, request);
     }
 
     @PatchMapping("/confirm")
