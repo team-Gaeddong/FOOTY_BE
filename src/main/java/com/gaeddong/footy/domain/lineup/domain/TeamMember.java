@@ -67,4 +67,10 @@ public class TeamMember {
         this.posX = null;
         this.posY = null;
     }
+
+    // 다른 팀으로 옮기면 이전 팀 배치 기준의 좌표는 쓸 수 없어 배치를 해제한다. 배정 포지션은 그대로다
+    public void moveTo(Team team) {
+        this.team = team;
+        unplace();
+    }
 }
