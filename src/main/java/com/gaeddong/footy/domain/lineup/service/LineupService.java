@@ -25,8 +25,11 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -104,6 +107,80 @@ public class LineupService {
         lineup.confirm();
         game.confirm();
         return new LineupDetail(lineup, findTeams(lineup));
+    }
+
+    /**
+     * 가장 최근 회차 라인업의 팀 소속을 통째로 바꾼다. 파티장만 할 수 있고, 팀이 확정되기 전
+     * (라인업 미확정 + 경기 모집 중)에만 할 수 있다. 같은 요청을 다시 보내도 결과가 같다.
+     * <p>
+     * 요청은 라인업의 모든 팀을 한 번씩 담아야 하고, 선수는 지금 라인업에 배정된 선수 전원을
+     * 한 번씩, 팀마다 1명 이상 담아야 한다. 팀을 옮긴 선수는 이전 팀 기준의 좌표를 버리고
+     * (배치 해제), 배정 포지션과 후보 여부는 그대로 둔다. 팀 실력 합계는 팀 짜기와 같은 규칙
+     * (후보 제외)으로 다시 계산한다. 포메이션과 라인업 방식은 바꾸지 않는다.
+     */
+    @Transactional
+    public LineupDetail updateTeams(Long requesterId, Long gameId, List<TeamAssignment> assignments) {
+        Game game = gameReader.getGameAsHost(gameId, requesterId);
+        Lineup lineup = getLatestLineup(gameId);
+        if (lineup.isConfirmed()) {
+            throw new FootyException(LineupErrorCode.LINEUP_CONFIRMED);
+        }
+        if (!game.isRecruiting()) {
+            throw new FootyException(GameErrorCode.GAME_NOT_RECRUITING);
+        }
+
+        List<Team> teams = teamRepository.findAllByLineupIdOrderByIdAsc(lineup.getId());
+        List<TeamMember> members = teamMemberRepository
+                .findAllByTeamIdInOrderByIdAsc(teams.stream().map(Team::getId).toList());
+        Map<Long, Team> targetTeams = resolveTargetTeams(assignments, teams, members);
+
+        for (TeamMember member : members) {
+            Team target = targetTeams.get(member.getGamePlayer().getId());
+            if (!member.getTeam().getId().equals(target.getId())) {
+                member.moveTo(target);
+            }
+        }
+        List<TeamDetail> details = toTeamDetails(teams, members);
+        details.forEach(detail -> detail.team().changeTotalSkill(sumStarterSkill(
+                detail.members().stream().map(TeamMember::getGamePlayer).toList())));
+        return new LineupDetail(lineup, details);
+    }
+
+    // 요청을 선수별 목표 팀으로 바꾸면서 요청이 라인업과 맞는지 확인한다
+    private Map<Long, Team> resolveTargetTeams(List<TeamAssignment> assignments, List<Team> teams,
+                                               List<TeamMember> members) {
+        Map<Long, Team> teamsById = teams.stream().collect(Collectors.toMap(Team::getId, team -> team));
+        List<Long> requestedTeamIds = assignments.stream().map(TeamAssignment::teamId).toList();
+        // 팀이 빠지거나 모르는 팀이 있거나 같은 팀이 두 번 오면 길이나 집합이 달라진다
+        if (requestedTeamIds.size() != teamsById.size() || !teamsById.keySet().containsAll(requestedTeamIds)
+                || new HashSet<>(requestedTeamIds).size() != requestedTeamIds.size()) {
+            throw new FootyException(LineupErrorCode.TEAM_SET_MISMATCH);
+        }
+
+        // 같은 선수가 두 번 오면 어느 팀으로 보낼지 알 수 없으므로 거부한다
+        Map<Long, Team> targetTeams = new HashMap<>();
+        for (TeamAssignment assignment : assignments) {
+            Team team = teamsById.get(assignment.teamId());
+            for (Long gamePlayerId : assignment.gamePlayerIds()) {
+                if (targetTeams.put(gamePlayerId, team) != null) {
+                    throw new FootyException(LineupErrorCode.DUPLICATE_PLACEMENT);
+                }
+            }
+        }
+        Set<Long> currentPlayerIds = members.stream()
+                .map(member -> member.getGamePlayer().getId())
+                .collect(Collectors.toSet());
+        if (!currentPlayerIds.containsAll(targetTeams.keySet())) {
+            throw new FootyException(LineupErrorCode.NOT_TEAM_MEMBER);
+        }
+        // 중복도 라인업 밖 선수도 없으므로 개수가 모자라면 누락이다
+        if (targetTeams.size() != currentPlayerIds.size()) {
+            throw new FootyException(LineupErrorCode.PLAYER_MISSING);
+        }
+        if (assignments.stream().anyMatch(assignment -> assignment.gamePlayerIds().isEmpty())) {
+            throw new FootyException(LineupErrorCode.EMPTY_TEAM);
+        }
+        return targetTeams;
     }
 
     // 참여 순으로 가져온다. 선수가 팀 수보다 적거나 실력이 비어 있는 선수가 있으면 팀을 짤 수 없다
@@ -184,9 +261,13 @@ public class LineupService {
     // 팀은 team_id 순, 팀원은 배정 순(team_member_id)이다. 팀마다 따로 조회하지 않도록 팀원을 한 번에 가져온다
     private List<TeamDetail> findTeams(Lineup lineup) {
         List<Team> teams = teamRepository.findAllByLineupIdOrderByIdAsc(lineup.getId());
-        Map<Long, List<TeamMember>> membersByTeamId = teamMemberRepository
-                .findAllByTeamIdInOrderByIdAsc(teams.stream().map(Team::getId).toList())
-                .stream()
+        return toTeamDetails(teams, teamMemberRepository
+                .findAllByTeamIdInOrderByIdAsc(teams.stream().map(Team::getId).toList()));
+    }
+
+    // members는 team_member_id 순이어야 한다. 팀 안에서도 그 순서가 유지된다
+    private List<TeamDetail> toTeamDetails(List<Team> teams, List<TeamMember> members) {
+        Map<Long, List<TeamMember>> membersByTeamId = members.stream()
                 .collect(Collectors.groupingBy(member -> member.getTeam().getId()));
         return teams.stream()
                 .map(team -> new TeamDetail(team, membersByTeamId.getOrDefault(team.getId(), List.of())))
@@ -194,6 +275,12 @@ public class LineupService {
     }
 
     public record LineupDetail(Lineup lineup, List<TeamDetail> teams) {
+    }
+
+    /**
+     * 직접 팀 편성 요청의 한 팀이다. gamePlayerIds는 경기 참가자 ID(game_player_id)다.
+     */
+    public record TeamAssignment(Long teamId, List<Long> gamePlayerIds) {
     }
 
     public record TeamDetail(Team team, List<TeamMember> members) {
