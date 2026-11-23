@@ -11,9 +11,11 @@ import com.gaeddong.footy.domain.game.presentation.dto.ListGamePlayersResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamesResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
+import com.gaeddong.footy.domain.game.service.GameListCondition;
 import com.gaeddong.footy.domain.game.service.GameListRole;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,6 +30,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -49,10 +52,12 @@ public class GameController {
             @AuthenticationPrincipal Long memberId,
             @RequestParam(required = false) List<GameStatus> status,
             @RequestParam(required = false) GameListRole role,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return gameFacade.list(memberId, status, role, page, size);
+        return gameFacade.list(memberId, new GameListCondition(status, role, from, to), page, size);
     }
 
     @GetMapping("/{gameId}")
