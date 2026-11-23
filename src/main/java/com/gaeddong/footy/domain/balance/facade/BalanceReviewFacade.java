@@ -3,6 +3,7 @@ package com.gaeddong.footy.domain.balance.facade;
 import com.gaeddong.footy.domain.balance.presentation.dto.BalanceSummaryResponse;
 import com.gaeddong.footy.domain.balance.presentation.dto.CreateBalanceReviewRequest;
 import com.gaeddong.footy.domain.balance.presentation.dto.CreateBalanceReviewResponse;
+import com.gaeddong.footy.domain.balance.presentation.dto.MyBalanceReviewResponse;
 import com.gaeddong.footy.domain.balance.service.BalanceReviewService;
 import com.gaeddong.footy.domain.balance.service.BalanceSummaryService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,10 @@ public class BalanceReviewFacade {
         return CreateBalanceReviewResponse.from(
                 balanceReviewService.create(writerId, gameId, request.score(), request.reasons(), request.comment())
         );
+    }
+
+    public MyBalanceReviewResponse getMine(Long writerId, Long gameId) {
+        return MyBalanceReviewResponse.of(gameId, balanceReviewService.findMine(writerId, gameId));
     }
 
     public BalanceSummaryResponse summarize(Long requesterId, Long gameId) {

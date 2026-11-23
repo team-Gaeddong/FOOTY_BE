@@ -5,10 +5,13 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface BalanceReviewRepository extends JpaRepository<BalanceReview, Long> {
 
     boolean existsByGameIdAndWriterId(Long gameId, Long writerId);
+
+    Optional<BalanceReview> findByGameIdAndWriterId(Long gameId, Long writerId);
 
     long countByGameId(Long gameId);
 

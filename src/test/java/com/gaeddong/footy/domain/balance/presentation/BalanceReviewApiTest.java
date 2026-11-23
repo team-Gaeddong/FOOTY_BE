@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -223,6 +224,77 @@ class BalanceReviewApiTest {
                 .andExpect(jsonPath("$.code").value("BALANCE_400_1"));
 
         assertThat(balanceReviewRepository.count()).isZero();
+    }
+
+    @Test
+    void 작성한_회원은_내_밸런스_평가를_조회한다() throws Exception {
+        Member host = saveMember("host");
+        Member player = saveMember("player");
+        Game game = saveGame(host, GameStatus.FINISHED);
+        join(game, host);
+        join(game, player);
+        perform(game.getId(), player, new Request(8,
+                List.of(BalanceReason.SKILL_GAP, BalanceReason.OUR_TEAM_TOO_WEAK), "실력 차이가 컸어요."))
+                .andExpect(status().isCreated());
+        // 다른 회원의 평가는 내 조회에 섞이지 않는다
+        perform(game.getId(), host, new Request(3, null, null))
+                .andExpect(status().isCreated());
+
+        getMine(game.getId(), player)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.gameId").value(game.getId()))
+                .andExpect(jsonPath("$.reviewed").value(true))
+                .andExpect(jsonPath("$.review.id").isNumber())
+                .andExpect(jsonPath("$.review.gameId").value(game.getId()))
+                .andExpect(jsonPath("$.review.score").value(8))
+                .andExpect(jsonPath("$.review.reasons[0]").value("SKILL_GAP"))
+                .andExpect(jsonPath("$.review.reasons[1]").value("OUR_TEAM_TOO_WEAK"))
+                .andExpect(jsonPath("$.review.comment").value("실력 차이가 컸어요."))
+                .andExpect(jsonPath("$.review.createdAt").isNotEmpty());
+    }
+
+    @Test
+    void 작성하지_않았거나_참가하지_않은_회원은_미작성으로_조회된다() throws Exception {
+        Member host = saveMember("host");
+        Member player = saveMember("player");
+        Member outsider = saveMember("outsider");
+        Game game = saveGame(host, GameStatus.CONFIRMED);
+        join(game, host);
+        join(game, player);
+
+        for (Member member : new Member[]{player, outsider}) {
+            getMine(game.getId(), member)
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.gameId").value(game.getId()))
+                    .andExpect(jsonPath("$.reviewed").value(false))
+                    .andExpect(jsonPath("$.review").isEmpty());
+        }
+    }
+
+    @Test
+    void 내_밸런스_평가_조회는_로그인이_필요하고_없거나_삭제된_경기는_404다() throws Exception {
+        Member host = saveMember("host");
+        Game game = saveGame(host, GameStatus.FINISHED);
+        join(game, host);
+
+        mockMvc.perform(get("/games/{gameId}/balance-reviews/me", game.getId()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("GLOBAL_401_1"));
+
+        getMine(Long.MAX_VALUE, host)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GAME_404_1"));
+
+        ReflectionTestUtils.setField(game, "deleted", true);
+        gameRepository.flush();
+        getMine(game.getId(), host)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GAME_404_1"));
+    }
+
+    private ResultActions getMine(Long gameId, Member member) throws Exception {
+        return mockMvc.perform(get("/games/{gameId}/balance-reviews/me", gameId)
+                .header("Authorization", token(member)));
     }
 
     private ResultActions perform(Long gameId, Member member, Request request) throws Exception {
