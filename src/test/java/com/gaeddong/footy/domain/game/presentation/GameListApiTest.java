@@ -153,6 +153,91 @@ class GameListApiTest {
     }
 
     @Test
+    void 날짜_범위를_주면_시작일과_종료일을_포함해_그_사이의_경기만_조회한다() throws Exception {
+        Member host = saveHost();
+        saveGame(host, "전날 밤", LocalDateTime.of(2030, 5, 31, 23, 59), false);
+        Game firstDay = saveGame(host, "첫날 0시", LocalDateTime.of(2030, 6, 1, 0, 0), false);
+        Game lastDay = saveGame(host, "마지막 날 밤", LocalDateTime.of(2030, 6, 7, 23, 59), false);
+        Game nextDay = saveGame(host, "다음 날 0시", LocalDateTime.of(2030, 6, 8, 0, 0), false);
+        String token = jwtProvider.createAccessToken(host.getId());
+
+        mockMvc.perform(get("/games")
+                        .queryParam("from", "2030-06-01")
+                        .queryParam("to", "2030-06-07")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.games[0].id").value(firstDay.getId()))
+                .andExpect(jsonPath("$.games[1].id").value(lastDay.getId()));
+
+        // 한쪽만 줘도 된다
+        mockMvc.perform(get("/games")
+                        .queryParam("from", "2030-06-07")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.games[0].id").value(lastDay.getId()))
+                .andExpect(jsonPath("$.games[1].id").value(nextDay.getId()));
+
+        mockMvc.perform(get("/games")
+                        .queryParam("to", "2030-06-01")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.games[1].id").value(firstDay.getId()));
+
+        // 하루만 볼 때는 같은 날짜를 준다
+        mockMvc.perform(get("/games")
+                        .queryParam("from", "2030-06-07")
+                        .queryParam("to", "2030-06-07")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.games[0].id").value(lastDay.getId()));
+    }
+
+    @Test
+    void 날짜_범위는_상태_역할_조건과_함께_쓸_수_있다() throws Exception {
+        Member me = saveHost();
+        Member other = saveHost("other@example.com", "google-other");
+        Game mineInRange = saveGame(me, "범위 안 내 경기", LocalDateTime.of(2030, 6, 2, 10, 0), false);
+        saveGame(me, "범위 밖 내 경기", LocalDateTime.of(2030, 7, 2, 10, 0), false);
+        saveGame(other, "범위 안 남의 경기", LocalDateTime.of(2030, 6, 3, 10, 0), false);
+        saveGame(me, "범위 안 종료 경기", LocalDateTime.of(2030, 6, 4, 10, 0), GameStatus.FINISHED);
+
+        mockMvc.perform(get("/games")
+                        .queryParam("from", "2030-06-01")
+                        .queryParam("to", "2030-06-07")
+                        .queryParam("role", "host")
+                        .queryParam("status", "RECRUITING,CONFIRMED")
+                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(me.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.games[0].id").value(mineInRange.getId()));
+    }
+
+    @Test
+    void 날짜_형식이_틀리거나_시작일이_종료일보다_늦으면_400이다() throws Exception {
+        Member host = saveHost();
+        String token = jwtProvider.createAccessToken(host.getId());
+
+        for (String from : new String[]{"2030/06/01", "2030-06-01T00:00:00", "오늘"}) {
+            mockMvc.perform(get("/games")
+                            .queryParam("from", from)
+                            .header("Authorization", "Bearer " + token))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("GLOBAL_400_1"));
+        }
+
+        mockMvc.perform(get("/games")
+                        .queryParam("from", "2030-06-02")
+                        .queryParam("to", "2030-06-01")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("GLOBAL_400_1"));
+    }
+
+    @Test
     void 목록의_각_경기에_후보를_포함한_참가_인원을_준다() throws Exception {
         Member host = saveHost();
         Member player = saveHost("player@example.com", "google-player");
