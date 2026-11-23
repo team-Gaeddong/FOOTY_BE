@@ -9,4 +9,7 @@ import java.util.List;
 public interface BalanceReviewReasonRepository extends JpaRepository<BalanceReviewReason, Long> {
 
     List<BalanceReviewReason> findAllByBalanceReviewIdIn(Collection<Long> balanceReviewIds);
+
+    // 고른 순서(저장 순서)대로
+    List<BalanceReviewReason> findAllByBalanceReviewIdOrderByIdAsc(Long balanceReviewId);
 }

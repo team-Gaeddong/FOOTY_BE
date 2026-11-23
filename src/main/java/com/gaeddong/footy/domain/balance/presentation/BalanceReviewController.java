@@ -4,6 +4,7 @@ import com.gaeddong.footy.domain.balance.facade.BalanceReviewFacade;
 import com.gaeddong.footy.domain.balance.presentation.dto.BalanceSummaryResponse;
 import com.gaeddong.footy.domain.balance.presentation.dto.CreateBalanceReviewRequest;
 import com.gaeddong.footy.domain.balance.presentation.dto.CreateBalanceReviewResponse;
+import com.gaeddong.footy.domain.balance.presentation.dto.MyBalanceReviewResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,11 @@ public class BalanceReviewController {
     ) {
         CreateBalanceReviewResponse response = balanceReviewFacade.create(memberId, gameId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/me")
+    public MyBalanceReviewResponse getMine(@AuthenticationPrincipal Long memberId, @PathVariable Long gameId) {
+        return balanceReviewFacade.getMine(memberId, gameId);
     }
 
     @GetMapping("/summary")

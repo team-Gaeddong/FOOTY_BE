@@ -21,6 +21,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -58,6 +59,18 @@ public class BalanceReviewService {
                                 .build())
                         .toList());
         return new CreatedReview(review, savedReasons);
+    }
+
+    /**
+     * 요청자 본인이 이 경기에 작성한 밸런스 평가를 찾는다(D-39).
+     * 참가하지 않았거나 아직 작성하지 않았으면 오류가 아니라 빈 값이다.
+     */
+    @Transactional(readOnly = true)
+    public Optional<CreatedReview> findMine(Long writerId, Long gameId) {
+        gameReader.getGame(gameId);
+        return balanceReviewRepository.findByGameIdAndWriterId(gameId, writerId)
+                .map(review -> new CreatedReview(
+                        review, balanceReviewReasonRepository.findAllByBalanceReviewIdOrderByIdAsc(review.getId())));
     }
 
     // 사유는 선택 항목이라 생략하면 빈 목록으로 본다
