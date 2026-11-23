@@ -52,6 +52,7 @@ public class Member {
     @Column(name = "nickname", length = 30)
     private String nickname;
 
+    // 평점(D-38). 컬럼이 NOT NULL이라 아직 평점이 없으면 0으로 둔다. 평점은 1~10점의 평균이라 0이 될 수 없다
     @Builder.Default
     @Column(name = "rating", nullable = false, precision = 5, scale = 2)
     private BigDecimal rating = BigDecimal.ZERO;
@@ -77,6 +78,18 @@ public class Member {
     @Builder.Default
     @Column(name = "is_onboarded", nullable = false)
     private boolean onboarded = false;
+
+    public boolean hasRating() {
+        return rating.signum() > 0;
+    }
+
+    public void changeRating(BigDecimal rating) {
+        this.rating = rating;
+    }
+
+    public void clearRating() {
+        this.rating = BigDecimal.ZERO;
+    }
 
     public void completeOnboarding(String nickname) {
         if (onboarded) {

@@ -7,6 +7,7 @@ import com.gaeddong.footy.domain.game.domain.repository.GameRepository;
 import com.gaeddong.footy.domain.game.exception.GameErrorCode;
 import com.gaeddong.footy.domain.member.domain.Member;
 import com.gaeddong.footy.domain.member.domain.Provider;
+import com.gaeddong.footy.domain.member.service.MemberRatingService;
 import com.gaeddong.footy.global.error.FootyException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,13 +38,17 @@ class GamePlayerServiceTest {
     @Mock
     private GamePlayerRepository gamePlayerRepository;
 
+    @Mock
+    private MemberRatingService memberRatingService;
+
     private GamePlayerService gamePlayerService;
 
     private Game game;
 
     @BeforeEach
     void setUp() {
-        gamePlayerService = new GamePlayerService(new GameReader(gameRepository), gamePlayerRepository);
+        gamePlayerService = new GamePlayerService(
+                new GameReader(gameRepository), gamePlayerRepository, memberRatingService);
 
         Member host = Member.builder()
                 .email("host@example.com")

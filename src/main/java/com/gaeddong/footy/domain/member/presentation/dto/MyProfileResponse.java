@@ -7,6 +7,9 @@ import com.gaeddong.footy.domain.member.domain.Position;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * rating은 평점이 아직 없으면 null이다(D-38).
+ */
 public record MyProfileResponse(
         Long memberId,
         String email,
@@ -21,7 +24,7 @@ public record MyProfileResponse(
                 member.getId(),
                 member.getEmail(),
                 member.getNickname(),
-                member.getRating(),
+                member.hasRating() ? member.getRating() : null,
                 member.isOnboarded(),
                 positions.stream().map(PositionResponse::from).toList()
         );
