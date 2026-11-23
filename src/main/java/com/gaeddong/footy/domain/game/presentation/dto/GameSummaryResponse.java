@@ -2,6 +2,7 @@ package com.gaeddong.footy.domain.game.presentation.dto;
 
 import com.gaeddong.footy.domain.game.domain.Game;
 import com.gaeddong.footy.domain.game.domain.GameStatus;
+import com.gaeddong.footy.domain.game.service.GameListService.GameSummary;
 
 import java.time.LocalDateTime;
 
@@ -13,9 +14,11 @@ public record GameSummaryResponse(
         String location,
         int maxPlayers,
         int teamCount,
-        GameStatus status
+        GameStatus status,
+        long playerCount
 ) {
-    public static GameSummaryResponse from(Game game) {
+    public static GameSummaryResponse from(GameSummary summary) {
+        Game game = summary.game();
         return new GameSummaryResponse(
                 game.getId(),
                 game.getHost().getId(),
@@ -24,7 +27,8 @@ public record GameSummaryResponse(
                 game.getLocation(),
                 game.getMaxPlayers(),
                 game.getTeamCount(),
-                game.getStatus()
+                game.getStatus(),
+                summary.playerCount()
         );
     }
 }

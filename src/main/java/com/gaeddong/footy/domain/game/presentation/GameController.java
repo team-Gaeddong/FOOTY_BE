@@ -1,5 +1,6 @@
 package com.gaeddong.footy.domain.game.presentation;
 
+import com.gaeddong.footy.domain.game.domain.GameStatus;
 import com.gaeddong.footy.domain.game.facade.GameFacade;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameResponse;
@@ -10,6 +11,7 @@ import com.gaeddong.footy.domain.game.presentation.dto.ListGamePlayersResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamesResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
+import com.gaeddong.footy.domain.game.service.GameListRole;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -25,6 +27,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/games")
@@ -42,10 +46,13 @@ public class GameController {
 
     @GetMapping
     public ListGamesResponse list(
+            @AuthenticationPrincipal Long memberId,
+            @RequestParam(required = false) List<GameStatus> status,
+            @RequestParam(required = false) GameListRole role,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return gameFacade.list(page, size);
+        return gameFacade.list(memberId, status, role, page, size);
     }
 
     @GetMapping("/{gameId}")

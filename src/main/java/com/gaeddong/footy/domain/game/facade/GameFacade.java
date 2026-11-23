@@ -1,6 +1,7 @@
 package com.gaeddong.footy.domain.game.facade;
 
 import com.gaeddong.footy.domain.game.domain.Game;
+import com.gaeddong.footy.domain.game.domain.GameStatus;
 import com.gaeddong.footy.domain.game.exception.GameErrorCode;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.CreateGameResponse;
@@ -15,6 +16,7 @@ import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
 import com.gaeddong.footy.domain.game.service.GameDeleteService;
 import com.gaeddong.footy.domain.game.service.GameDetailService;
 import com.gaeddong.footy.domain.game.service.GameFinishService;
+import com.gaeddong.footy.domain.game.service.GameListRole;
 import com.gaeddong.footy.domain.game.service.GameListService;
 import com.gaeddong.footy.domain.game.service.GamePlayerService;
 import com.gaeddong.footy.domain.game.service.GameService;
@@ -28,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -57,8 +60,8 @@ public class GameFacade {
         return CreateGameResponse.from(game);
     }
 
-    public ListGamesResponse list(int page, int size) {
-        return ListGamesResponse.from(gameListService.list(page, size));
+    public ListGamesResponse list(Long memberId, List<GameStatus> statuses, GameListRole role, int page, int size) {
+        return ListGamesResponse.from(gameListService.list(memberId, statuses, role, page, size));
     }
 
     public GameDetailResponse get(Long memberId, Long gameId) {
