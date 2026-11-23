@@ -15,6 +15,7 @@ import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
 import com.gaeddong.footy.domain.game.service.GameDeleteService;
 import com.gaeddong.footy.domain.game.service.GameDetailService;
 import com.gaeddong.footy.domain.game.service.GameFinishService;
+import com.gaeddong.footy.domain.game.service.GameListCondition;
 import com.gaeddong.footy.domain.game.service.GameListService;
 import com.gaeddong.footy.domain.game.service.GamePlayerService;
 import com.gaeddong.footy.domain.game.service.GameService;
@@ -57,8 +58,8 @@ public class GameFacade {
         return CreateGameResponse.from(game);
     }
 
-    public ListGamesResponse list(int page, int size) {
-        return ListGamesResponse.from(gameListService.list(page, size));
+    public ListGamesResponse list(Long memberId, GameListCondition condition, int page, int size) {
+        return ListGamesResponse.from(gameListService.list(memberId, condition, page, size));
     }
 
     public GameDetailResponse get(Long memberId, Long gameId) {
