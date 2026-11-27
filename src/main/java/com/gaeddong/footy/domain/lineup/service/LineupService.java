@@ -110,6 +110,23 @@ public class LineupService {
     }
 
     /**
+     * 팀 확정을 취소해 확정 전 상태로 되돌린다(D-40). 파티장만, 팀이 확정된(CONFIRMED) 경기에서만 할 수 있다.
+     * 팀 구성과 전술 배치는 그대로 두고, 경기는 다시 모집 중이 되어 참가와 팀 수정이 열린다.
+     */
+    @Transactional
+    public LineupDetail cancelConfirmation(Long requesterId, Long gameId) {
+        Game game = gameReader.getGameAsHost(gameId, requesterId);
+        if (!game.isConfirmed()) {
+            throw new FootyException(LineupErrorCode.LINEUP_NOT_CONFIRMED);
+        }
+
+        Lineup lineup = getLatestLineup(gameId);
+        lineup.cancelConfirmation();
+        game.reopen();
+        return new LineupDetail(lineup, findTeams(lineup));
+    }
+
+    /**
      * 가장 최근 회차 라인업의 팀 소속을 통째로 바꾼다. 파티장만 할 수 있고, 팀이 확정되기 전
      * (라인업 미확정 + 경기 모집 중)에만 할 수 있다. 같은 요청을 다시 보내도 결과가 같다.
      * <p>
