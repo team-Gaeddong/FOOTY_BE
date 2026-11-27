@@ -1,6 +1,7 @@
 package com.gaeddong.footy.domain.game.domain.repository;
 
 import com.gaeddong.footy.domain.game.domain.GamePlayer;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -13,6 +14,10 @@ public interface GamePlayerRepository extends JpaRepository<GamePlayer, Long> {
     List<GamePlayer> findAllByGameIdAndIdIn(Long gameId, Collection<Long> ids);
 
     List<GamePlayer> findAllByGameIdOrderByJoinedAtAscIdAsc(Long gameId);
+
+    // 선수 목록에서 회원 평점을 함께 보여 주므로 회원을 같이 읽는다
+    @EntityGraph(attributePaths = "member")
+    List<GamePlayer> findWithMemberByGameIdOrderByJoinedAtAscIdAsc(Long gameId);
 
     Optional<GamePlayer> findByIdAndGameId(Long id, Long gameId);
 
