@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
@@ -111,6 +112,18 @@ class LineupApiTest {
     private ResultActions createLineup(Member requester, Long gameId) throws Exception {
         return mockMvc.perform(post("/games/{gameId}/lineups", gameId)
                 .header("Authorization", "Bearer " + jwtProvider.createAccessToken(requester.getId())));
+    }
+
+    private ResultActions cancelConfirmation(Member requester, Long gameId) throws Exception {
+        return mockMvc.perform(patch("/games/{gameId}/lineups/confirm/cancel", gameId)
+                .header("Authorization", "Bearer " + jwtProvider.createAccessToken(requester.getId())));
+    }
+
+    private ResultActions join(Member requester, Long gameId) throws Exception {
+        return mockMvc.perform(post("/games/{gameId}/players", gameId)
+                .header("Authorization", "Bearer " + jwtProvider.createAccessToken(requester.getId()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"positions\":[\"MF\"]}"));
     }
 
     private ResultActions confirmLineup(Member requester, Long gameId) throws Exception {
@@ -239,6 +252,106 @@ class LineupApiTest {
         confirmLineup(host, game.getId())
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("GAME_409_1"));
+    }
+
+    @Test
+    void 파티장이_팀_확정을_취소하면_라인업과_경기가_확정_전_상태로_돌아간다() throws Exception {
+        Member host = saveMember("host");
+        Game game = saveGame(host);
+        savePlayer(game, host, 0, 6, Position.MF);
+        savePlayer(game, saveMember("p1"), 1, 9, Position.FW);
+        createLineup(host, game.getId()).andExpect(status().isCreated());
+        confirmLineup(host, game.getId()).andExpect(status().isOk());
+
+        cancelConfirmation(host, game.getId())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lineupId").isNumber())
+                .andExpect(jsonPath("$.isConfirmed").value(false))
+                .andExpect(jsonPath("$.teams", hasSize(2)))
+                .andExpect(jsonPath("$.teams[0].members", hasSize(1)))
+                .andExpect(jsonPath("$.teams[0].members[0].skillLevel").value(9))
+                .andExpect(jsonPath("$.teams[1].members", hasSize(1)));
+
+        assertThat(lineupRepository.findFirstByGameIdOrderByVersionDesc(game.getId()).orElseThrow().isConfirmed()).isFalse();
+        assertThat(gameRepository.findById(game.getId()).orElseThrow().getStatus()).isEqualTo(GameStatus.RECRUITING);
+        assertThat(teamMemberRepository.count()).isEqualTo(2);
+    }
+
+    @Test
+    void 확정을_취소한_뒤에는_다시_참가를_받고_다시_확정할_수_있다() throws Exception {
+        Member host = saveMember("host");
+        Member late = saveMember("late");
+        Game game = saveGame(host);
+        savePlayer(game, host, 0, 6);
+        savePlayer(game, saveMember("p1"), 1, 9);
+        createLineup(host, game.getId()).andExpect(status().isCreated());
+        confirmLineup(host, game.getId()).andExpect(status().isOk());
+
+        // 확정된 경기는 참가를 받지 않는다
+        join(late, game.getId())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("GAME_409_1"));
+
+        cancelConfirmation(host, game.getId()).andExpect(status().isOk());
+
+        join(late, game.getId()).andExpect(status().isCreated());
+        // 새로 참가한 선수는 팀에 배정되지 않은 채로 남는다
+        assertThat(teamMemberRepository.count()).isEqualTo(2);
+        confirmLineup(host, game.getId())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.isConfirmed").value(true));
+    }
+
+    @Test
+    void 파티장이_아니거나_로그인하지_않으면_팀_확정을_취소할_수_없다() throws Exception {
+        Member host = saveMember("host");
+        Member other = saveMember("other");
+        Game game = saveGame(host);
+        savePlayer(game, host, 0, 6);
+        savePlayer(game, other, 1, 9);
+        createLineup(host, game.getId()).andExpect(status().isCreated());
+        confirmLineup(host, game.getId()).andExpect(status().isOk());
+
+        cancelConfirmation(other, game.getId())
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("GAME_403_1"));
+        mockMvc.perform(patch("/games/{gameId}/lineups/confirm/cancel", game.getId()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("GLOBAL_401_1"));
+
+        assertThat(gameRepository.findById(game.getId()).orElseThrow().getStatus()).isEqualTo(GameStatus.CONFIRMED);
+    }
+
+    @Test
+    void 확정되지_않았거나_종료된_경기는_팀_확정을_취소할_수_없다() throws Exception {
+        Member host = saveMember("host");
+        Game game = saveGame(host);
+        savePlayer(game, host, 0, 6);
+        savePlayer(game, saveMember("p1"), 1, 9);
+        createLineup(host, game.getId()).andExpect(status().isCreated());
+
+        // 아직 모집 중
+        cancelConfirmation(host, game.getId())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("LINEUP_409_5"));
+
+        confirmLineup(host, game.getId()).andExpect(status().isOk());
+        ReflectionTestUtils.setField(game, "status", GameStatus.FINISHED);
+        gameRepository.saveAndFlush(game);
+
+        cancelConfirmation(host, game.getId())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("LINEUP_409_5"));
+        assertThat(lineupRepository.findFirstByGameIdOrderByVersionDesc(game.getId()).orElseThrow().isConfirmed()).isTrue();
+    }
+
+    @Test
+    void 없는_경기의_팀_확정을_취소하면_404다() throws Exception {
+        Member host = saveMember("host");
+
+        cancelConfirmation(host, Long.MAX_VALUE)
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GAME_404_1"));
     }
 
     @Test

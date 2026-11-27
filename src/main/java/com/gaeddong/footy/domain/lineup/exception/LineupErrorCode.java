@@ -19,7 +19,8 @@ public enum LineupErrorCode implements ErrorCode {
     LINEUP_ALREADY_EXISTS(HttpStatus.CONFLICT, "LINEUP_409_1", "이미 팀을 짠 경기입니다."),
     UNRATED_PLAYER_EXISTS(HttpStatus.CONFLICT, "LINEUP_409_2", "실력 점수가 없는 선수가 있습니다."),
     NOT_ENOUGH_PLAYERS(HttpStatus.CONFLICT, "LINEUP_409_3", "팀을 짜려면 선수가 2명 이상이어야 합니다."),
-    LINEUP_CONFIRMED(HttpStatus.CONFLICT, "LINEUP_409_4", "확정된 팀은 수정할 수 없습니다.");
+    LINEUP_CONFIRMED(HttpStatus.CONFLICT, "LINEUP_409_4", "확정된 팀은 수정할 수 없습니다."),
+    LINEUP_NOT_CONFIRMED(HttpStatus.CONFLICT, "LINEUP_409_5", "팀이 확정된 경기만 확정을 취소할 수 있습니다.");
 
     private final HttpStatus status;
     private final String code;

@@ -38,6 +38,10 @@ public class LineupFacade {
         return LineupResponse.from(lineupService.confirm(requesterId, gameId));
     }
 
+    public LineupResponse cancelConfirmation(Long requesterId, Long gameId) {
+        return LineupResponse.from(lineupService.cancelConfirmation(requesterId, gameId));
+    }
+
     // 파티장만 호출하므로 실력을 그대로 내린다
     public LineupResponse updateTeams(Long requesterId, Long gameId, UpdateLineupTeamsRequest request) {
         List<TeamAssignment> assignments = request.teams().stream()

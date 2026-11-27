@@ -80,6 +80,11 @@ public class Game {
         this.status = GameStatus.CONFIRMED;
     }
 
+    // 팀 확정을 취소하면 확정 전과 같이 다시 모집 중이 된다(D-40)
+    public void reopen() {
+        this.status = GameStatus.RECRUITING;
+    }
+
     public void finish() {
         this.status = GameStatus.FINISHED;
     }

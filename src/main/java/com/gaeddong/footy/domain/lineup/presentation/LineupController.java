@@ -44,4 +44,9 @@ public class LineupController {
     public LineupResponse confirm(@AuthenticationPrincipal Long memberId, @PathVariable Long gameId) {
         return lineupFacade.confirm(memberId, gameId);
     }
+
+    @PatchMapping("/confirm/cancel")
+    public LineupResponse cancelConfirmation(@AuthenticationPrincipal Long memberId, @PathVariable Long gameId) {
+        return lineupFacade.cancelConfirmation(memberId, gameId);
+    }
 }

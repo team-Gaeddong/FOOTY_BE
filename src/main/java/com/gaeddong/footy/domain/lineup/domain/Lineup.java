@@ -63,4 +63,8 @@ public class Lineup {
     public void confirm() {
         this.confirmed = true;
     }
+
+    public void cancelConfirmation() {
+        this.confirmed = false;
+    }
 }
