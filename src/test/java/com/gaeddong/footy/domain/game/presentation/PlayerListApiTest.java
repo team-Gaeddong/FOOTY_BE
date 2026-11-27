@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import static org.hamcrest.Matchers.hasSize;
@@ -133,6 +134,51 @@ class PlayerListApiTest {
                 .andExpect(jsonPath("$.players[0].name").value("파티장"))
                 .andExpect(jsonPath("$.players[0].skillLevel").isEmpty())
                 .andExpect(jsonPath("$.players[0].positions[0]").value("GK"));
+    }
+
+    @Test
+    void 파티장과_그_경기_참가자는_선수별_회원_평점을_본다() throws Exception {
+        Member host = saveMember("host@example.com", "google-host", "파티장");
+        Member rated = saveMember("rated@example.com", "google-rated", "평점있음");
+        Member unrated = saveMember("unrated@example.com", "google-unrated", "평점없음");
+        Member outsider = saveMember("outsider@example.com", "google-outsider", "구경꾼");
+        rated.changeRating(new BigDecimal("7.25"));
+        memberRepository.saveAndFlush(rated);
+        Game game = saveGame(host);
+        LocalDateTime joinedAt = LocalDateTime.of(2026, 10, 29, 12, 0);
+        savePlayer(game, rated, joinedAt, 6, Position.FW);
+        savePlayer(game, unrated, joinedAt.plusMinutes(1), 5, Position.MF);
+        gamePlayerRepository.saveAndFlush(new GamePlayer(game, null, "게스트", joinedAt.plusMinutes(2)));
+
+        // 파티장은 참가 선수 목록에 없어도 본다
+        for (Member viewer : new Member[]{host, unrated}) {
+            getPlayers(viewer, game.getId())
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.players[0].rating").value(7.25))
+                    .andExpect(jsonPath("$.players[1].rating").isEmpty())
+                    .andExpect(jsonPath("$.players[2].memberId").isEmpty())
+                    .andExpect(jsonPath("$.players[2].rating").isEmpty());
+        }
+
+        getPlayers(outsider, game.getId())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.players", hasSize(3)))
+                .andExpect(jsonPath("$.players[0].rating").isEmpty());
+    }
+
+    @Test
+    void 탈퇴한_회원의_평점은_보이지_않는다() throws Exception {
+        Member host = saveMember("host@example.com", "google-host", "파티장");
+        Member withdrawn = saveMember("gone@example.com", "google-gone", "탈퇴");
+        withdrawn.changeRating(new BigDecimal("9.00"));
+        Game game = saveGame(host);
+        savePlayer(game, withdrawn, LocalDateTime.of(2026, 10, 29, 12, 0), 6, Position.FW);
+        withdrawn.withdraw(LocalDateTime.now());
+        memberRepository.saveAndFlush(withdrawn);
+
+        getPlayers(host, game.getId())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.players[0].rating").isEmpty());
     }
 
     @Test
