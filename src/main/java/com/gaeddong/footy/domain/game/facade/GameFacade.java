@@ -9,8 +9,10 @@ import com.gaeddong.footy.domain.game.presentation.dto.JoinGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.JoinGameResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamePlayersResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamesResponse;
+import com.gaeddong.footy.domain.game.presentation.dto.ListPlayerRatingsResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.RematchGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
+import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerRatingsRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
 import com.gaeddong.footy.domain.game.service.GameDeleteService;
 import com.gaeddong.footy.domain.game.service.GameDetailService;
@@ -23,11 +25,13 @@ import com.gaeddong.footy.domain.game.service.PlayerJoinService;
 import com.gaeddong.footy.domain.game.service.PlayerJoinService.JoinedPlayer;
 import com.gaeddong.footy.domain.game.service.PlayerListService;
 import com.gaeddong.footy.domain.game.service.PlayerPositionService;
+import com.gaeddong.footy.domain.game.service.PlayerRatingService;
 import com.gaeddong.footy.domain.game.service.RematchGameService;
 import com.gaeddong.footy.global.error.FootyException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,6 +41,7 @@ public class GameFacade {
 
     private final GameService gameService;
     private final GamePlayerService gamePlayerService;
+    private final PlayerRatingService playerRatingService;
     private final GameListService gameListService;
     private final PlayerPositionService playerPositionService;
     private final RematchGameService rematchGameService;
@@ -80,6 +85,14 @@ public class GameFacade {
         gamePlayerService.updateSkillLevels(memberId, gameId, toSkillLevelsByPlayerId(request));
     }
 
+    public void updateRatings(Long memberId, Long gameId, UpdatePlayerRatingsRequest request) {
+        playerRatingService.rate(memberId, gameId, toRatingsByPlayerId(request));
+    }
+
+    public ListPlayerRatingsResponse listRatings(Long memberId, Long gameId) {
+        return ListPlayerRatingsResponse.of(gameId, playerRatingService.list(memberId, gameId));
+    }
+
     public CreateGameResponse rematch(Long requesterId, Long sourceGameId, RematchGameRequest request) {
         return CreateGameResponse.from(rematchGameService.create(requesterId, sourceGameId, request.playDate()));
     }
@@ -96,6 +109,17 @@ public class GameFacade {
 
     public ListGamePlayersResponse listPlayers(Long memberId, Long gameId) {
         return ListGamePlayersResponse.from(playerListService.list(memberId, gameId));
+    }
+
+    // 같은 선수가 두 번 오면 어느 평점을 쓸지 알 수 없으므로 거부한다
+    private Map<Long, BigDecimal> toRatingsByPlayerId(UpdatePlayerRatingsRequest request) {
+        Map<Long, BigDecimal> ratings = new HashMap<>();
+        for (UpdatePlayerRatingsRequest.PlayerRating player : request.players()) {
+            if (ratings.put(player.gamePlayerId(), player.rating()) != null) {
+                throw new FootyException(GameErrorCode.DUPLICATE_GAME_PLAYER);
+            }
+        }
+        return ratings;
     }
 
     // 같은 선수가 두 번 오면 어느 점수를 쓸지 알 수 없으므로 거부한다

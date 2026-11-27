@@ -16,8 +16,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * 회원 평점(member.rating)을 다시 계산한다(D-38).
- * 평점은 종료된 경기에서 파티장에게 받은 점수의 평균이고, 그런 경기가 2개 이상일 때부터 생긴다.
+ * 회원 평점(member.rating)을 다시 계산한다(D-38, D-41).
+ * 평점은 종료된 경기에서 파티장에게 받은 경기 후 평점의 평균이고, 그런 경기가 2개 이상일 때부터 생긴다.
  */
 @Service
 @RequiredArgsConstructor
@@ -30,13 +30,8 @@ public class MemberRatingService {
     private final MemberRepository memberRepository;
 
     /**
-     * 이 경기에 참가한 회원들의 평점을 다시 계산한다. 경기를 종료한 직후에 부른다.
+     * 이 회원들의 평점을 다시 계산한다. 경기 후 평점을 저장한 직후에 부른다(D-41).
      */
-    @Transactional
-    public void refreshForGame(Long gameId) {
-        refresh(gamePlayerRepository.findMemberIdsByGameId(gameId));
-    }
-
     @Transactional
     public void refresh(Collection<Long> memberIds) {
         if (memberIds.isEmpty()) {

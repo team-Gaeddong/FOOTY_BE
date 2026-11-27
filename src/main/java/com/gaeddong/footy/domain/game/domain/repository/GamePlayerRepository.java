@@ -32,19 +32,12 @@ public interface GamePlayerRepository extends JpaRepository<GamePlayer, Long> {
             """)
     List<PlayerCount> countPlayersByGameIds(Collection<Long> gameIds);
 
+    // 회원별로 종료된 경기에서 받은 경기 후 평점의 평균과 그 경기 수. 평점을 받은 경기가 없는 회원은 결과에 나오지 않는다
     @Query("""
-            select p.member.id
-            from GamePlayer p
-            where p.game.id = :gameId and p.member is not null
-            """)
-    List<Long> findMemberIdsByGameId(Long gameId);
-
-    // 회원별로 종료된 경기에서 받은 평점의 평균과 그 경기 수. 평점을 받은 종료 경기가 없는 회원은 결과에 나오지 않는다
-    @Query("""
-            select p.member.id as memberId, avg(p.skillLevel) as average, count(p) as ratedGameCount
+            select p.member.id as memberId, avg(p.rating) as average, count(p) as ratedGameCount
             from GamePlayer p
             where p.member.id in :memberIds
-              and p.skillLevel is not null
+              and p.rating is not null
               and p.game.status = com.gaeddong.footy.domain.game.domain.GameStatus.FINISHED
               and p.game.deleted = false
             group by p.member.id
