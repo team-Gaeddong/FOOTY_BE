@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -89,7 +90,7 @@ class PlayerListServiceTest {
         GamePlayer host = player(game, 100L, game.getHost(), 8);
         GamePlayer other = player(game, 101L, member(OTHER_ID, "홍길동"), 5);
         when(gameRepository.findById(GAME_ID)).thenReturn(Optional.of(game));
-        when(gamePlayerRepository.findAllByGameIdOrderByJoinedAtAscIdAsc(GAME_ID)).thenReturn(List.of(host, other));
+        when(gamePlayerRepository.findWithMemberByGameIdOrderByJoinedAtAscIdAsc(GAME_ID)).thenReturn(List.of(host, other));
         when(playerPositionRepository.findAllByGamePlayerIdInOrderByPriorityAsc(List.of(100L, 101L))).thenReturn(List.of(
                 position(host, Position.GK, 1),
                 position(other, Position.FW, 1),
@@ -122,9 +123,27 @@ class PlayerListServiceTest {
     }
 
     @Test
+    void 파티장과_참가자에게는_회원_평점이_보이고_그_외에는_NULL이다() {
+        Game game = game();
+        List<GamePlayer> players = givenPlayers(game);
+        players.get(0).getMember().changeRating(new BigDecimal("7.25"));
+
+        // 파티장, 참가자(OTHER_ID)
+        for (Long viewer : new Long[]{HOST_ID, OTHER_ID}) {
+            assertThat(playerListService.list(viewer, GAME_ID))
+                    .extracting(ListedPlayer::rating)
+                    .containsExactly(new BigDecimal("7.25"), null);
+        }
+        // 참가하지 않은 회원
+        assertThat(playerListService.list(999L, GAME_ID))
+                .extracting(ListedPlayer::rating)
+                .containsExactly(null, null);
+    }
+
+    @Test
     void 참가_선수가_없으면_빈_목록이고_포지션을_조회하지_않는다() {
         when(gameRepository.findById(GAME_ID)).thenReturn(Optional.of(game()));
-        when(gamePlayerRepository.findAllByGameIdOrderByJoinedAtAscIdAsc(GAME_ID)).thenReturn(List.of());
+        when(gamePlayerRepository.findWithMemberByGameIdOrderByJoinedAtAscIdAsc(GAME_ID)).thenReturn(List.of());
 
         assertThat(playerListService.list(HOST_ID, GAME_ID)).isEmpty();
         verify(playerPositionRepository, never()).findAllByGamePlayerIdInOrderByPriorityAsc(any());
