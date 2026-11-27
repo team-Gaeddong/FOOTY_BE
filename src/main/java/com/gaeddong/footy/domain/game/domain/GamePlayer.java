@@ -16,6 +16,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -44,9 +45,13 @@ public class GamePlayer {
     @Column(name = "name", nullable = false, length = 30)
     private String name;
 
-    // 파티장 평가 전에는 NULL
+    // 경기 전 실력(팀 짜기용). 파티장 평가 전에는 NULL
     @Column(name = "skill_level")
     private Integer skillLevel;
+
+    // 경기 후 평점(D-41). 1.0~10.0, 0.5 단위. 파티장이 주기 전에는 NULL
+    @Column(name = "rating", precision = 3, scale = 1)
+    private BigDecimal rating;
 
     @Column(name = "is_substitute", nullable = false)
     private boolean substitute = false;
@@ -64,6 +69,10 @@ public class GamePlayer {
 
     public void changeSkillLevel(int skillLevel) {
         this.skillLevel = skillLevel;
+    }
+
+    public void changeRating(BigDecimal rating) {
+        this.rating = rating;
     }
 
     public void changeSubstitute(boolean substitute) {
