@@ -30,7 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 회원 평점(D-38): 종료된 경기에서 파티장에게 받은 점수의 평균이고, 그런 경기가 2개 이상일 때부터 나온다.
+ * 회원 평점(D-38, D-41): 종료된 경기에서 파티장에게 받은 경기 후 평점의 평균이고, 그런 경기가 2개 이상일 때부터 나온다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -56,91 +56,74 @@ class MemberRatingApiTest {
     private AccessTokenBlacklistRepository blacklistRepository;
 
     @Test
-    void 평점은_두_번째_경기가_종료될_때_생기고_그_뒤로는_경기가_끝날_때마다_갱신된다() throws Exception {
+    void 평점은_두_번째_경기의_평점을_받을_때_생기고_그_뒤로는_평점을_받을_때마다_갱신된다() throws Exception {
         Member host = saveMember("host");
         Member player = saveMember("player");
 
-        Game first = saveConfirmedGame(host);
-        join(first, player, 7);
+        GamePlayer first = join(saveFinishedGame(host), player);
         myRating(player).andExpect(jsonPath("$.rating").isEmpty());
 
-        finish(first, host);
+        rate(first, host, "7");
         // 한 경기만으로는 평점이 나오지 않는다
         myRating(player).andExpect(jsonPath("$.rating").isEmpty());
 
-        Game second = saveConfirmedGame(host);
-        join(second, player, 8);
-        // 점수를 받았어도 경기가 끝나기 전에는 반영되지 않는다
+        GamePlayer second = join(saveFinishedGame(host), player);
+        // 경기가 끝났어도 평점을 받기 전에는 반영되지 않는다
         myRating(player).andExpect(jsonPath("$.rating").isEmpty());
 
-        finish(second, host);
-        myRating(player).andExpect(jsonPath("$.rating").value(7.5));
+        rate(second, host, "8.5");
+        myRating(player).andExpect(jsonPath("$.rating").value(7.75));
 
-        Game third = saveConfirmedGame(host);
-        join(third, player, 10);
-        finish(third, host);
-        // (7 + 8 + 10) / 3 = 8.333… → 소수 둘째 자리 반올림
+        rate(join(saveFinishedGame(host), player), host, "10");
+        // (7 + 8.5 + 10) / 3 = 8.5
+        myRating(player).andExpect(jsonPath("$.rating").value(8.5));
+
+        rate(join(saveFinishedGame(host), player), host, "1.5");
+        // (7 + 8.5 + 10 + 1.5) / 4 = 6.75
+        myRating(player).andExpect(jsonPath("$.rating").value(6.75));
+    }
+
+    @Test
+    void 평균은_소수_둘째_자리에서_반올림한다() throws Exception {
+        Member host = saveMember("host");
+        Member player = saveMember("player");
+
+        for (String rating : new String[]{"7", "8", "10"}) {
+            rate(join(saveFinishedGame(host), player), host, rating);
+        }
+        // (7 + 8 + 10) / 3 = 8.333…
         myRating(player).andExpect(jsonPath("$.rating").value(8.33));
     }
 
     @Test
-    void 경기를_종료하면_그_경기에_참가한_회원_모두의_평점이_갱신된다() throws Exception {
-        Member host = saveMember("host");
-        Member player = saveMember("player");
-        Member bystander = saveMember("bystander");
-
-        for (int[] scores : new int[][]{{6, 9}, {8, 10}}) {
-            Game game = saveConfirmedGame(host);
-            join(game, host, scores[0]);
-            join(game, player, scores[1]);
-            finish(game, host);
-        }
-
-        myRating(host).andExpect(jsonPath("$.rating").value(7.0));
-        myRating(player).andExpect(jsonPath("$.rating").value(9.5));
-        myRating(bystander).andExpect(jsonPath("$.rating").isEmpty());
-    }
-
-    @Test
-    void 점수를_받지_않은_경기는_평점_계산에서_뺀다() throws Exception {
+    void 이미_준_평점을_고치면_회원_평점도_다시_계산한다() throws Exception {
         Member host = saveMember("host");
         Member player = saveMember("player");
 
-        Game rated = saveConfirmedGame(host);
-        join(rated, player, 9);
-        finish(rated, host);
-        Game unrated = saveConfirmedGame(host);
-        join(unrated, player, null);
-        finish(unrated, host);
-        // 종료된 경기는 둘이지만 점수를 받은 경기는 하나뿐이다
-        myRating(player).andExpect(jsonPath("$.rating").isEmpty());
-
-        Game ratedAgain = saveConfirmedGame(host);
-        join(ratedAgain, player, 6);
-        finish(ratedAgain, host);
-        myRating(player).andExpect(jsonPath("$.rating").value(7.5));
-    }
-
-    @Test
-    void 종료된_경기의_점수를_바꾸면_평점을_다시_계산한다() throws Exception {
-        Member host = saveMember("host");
-        Member player = saveMember("player");
-
-        Game first = saveConfirmedGame(host);
-        join(first, player, 4);
-        finish(first, host);
-        Game second = saveConfirmedGame(host);
-        GamePlayer secondPlayer = join(second, player, 6);
-        finish(second, host);
+        rate(join(saveFinishedGame(host), player), host, "4");
+        GamePlayer second = join(saveFinishedGame(host), player);
+        rate(second, host, "6");
         myRating(player).andExpect(jsonPath("$.rating").value(5.0));
 
-        mockMvc.perform(patch("/games/{gameId}/players/skill-levels", second.getId())
-                        .header("Authorization", token(host))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"players\":[{\"gamePlayerId\":" + secondPlayer.getId() + ",\"skillLevel\":10}]}"))
-                .andExpect(status().is2xxSuccessful());
-
+        rate(second, host, "10");
         myRating(player).andExpect(jsonPath("$.rating").value(7.0));
+    }
+
+    @Test
+    void 경기_전_실력은_회원_평점에_쓰지_않는다() throws Exception {
+        Member host = saveMember("host");
+        Member player = saveMember("player");
+
+        for (int i = 0; i < 2; i++) {
+            Game game = saveConfirmedGame(host);
+            GamePlayer gamePlayer = join(game, player);
+            gamePlayer.changeSkillLevel(9);
+            gamePlayerRepository.saveAndFlush(gamePlayer);
+            mockMvc.perform(patch("/games/{gameId}/finish", game.getId()).header("Authorization", token(host)))
+                    .andExpect(status().isOk());
+        }
+
+        myRating(player).andExpect(jsonPath("$.rating").isEmpty());
     }
 
     private ResultActions myRating(Member member) throws Exception {
@@ -148,9 +131,12 @@ class MemberRatingApiTest {
                 .andExpect(status().isOk());
     }
 
-    private void finish(Game game, Member host) throws Exception {
-        mockMvc.perform(patch("/games/{gameId}/finish", game.getId()).header("Authorization", token(host)))
-                .andExpect(status().isOk());
+    private void rate(GamePlayer player, Member host, String rating) throws Exception {
+        mockMvc.perform(patch("/games/{gameId}/players/ratings", player.getGame().getId())
+                        .header("Authorization", token(host))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"players\":[{\"gamePlayerId\":" + player.getId() + ",\"rating\":" + rating + "}]}"))
+                .andExpect(status().isNoContent());
     }
 
     private Member saveMember(String nickname) {
@@ -171,12 +157,14 @@ class MemberRatingApiTest {
         return gameRepository.saveAndFlush(game);
     }
 
-    private GamePlayer join(Game game, Member member, Integer score) {
-        GamePlayer player = new GamePlayer(game, member, member.getNickname(), LocalDateTime.now());
-        if (score != null) {
-            player.changeSkillLevel(score);
-        }
-        return gamePlayerRepository.saveAndFlush(player);
+    private Game saveFinishedGame(Member host) {
+        Game game = saveConfirmedGame(host);
+        ReflectionTestUtils.setField(game, "status", GameStatus.FINISHED);
+        return gameRepository.saveAndFlush(game);
+    }
+
+    private GamePlayer join(Game game, Member member) {
+        return gamePlayerRepository.saveAndFlush(new GamePlayer(game, member, member.getNickname(), LocalDateTime.now()));
     }
 
     private String token(Member member) {

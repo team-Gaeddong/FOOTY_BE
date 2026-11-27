@@ -9,7 +9,9 @@ import com.gaeddong.footy.domain.game.presentation.dto.JoinGameRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.JoinGameResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamePlayersResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.ListGamesResponse;
+import com.gaeddong.footy.domain.game.presentation.dto.ListPlayerRatingsResponse;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerPositionsRequest;
+import com.gaeddong.footy.domain.game.presentation.dto.UpdatePlayerRatingsRequest;
 import com.gaeddong.footy.domain.game.presentation.dto.UpdateSkillLevelsRequest;
 import com.gaeddong.footy.domain.game.service.GameListCondition;
 import com.gaeddong.footy.domain.game.service.GameListRole;
@@ -87,6 +89,19 @@ public class GameController {
                                                   @Valid @RequestBody UpdateSkillLevelsRequest request) {
         gameFacade.updateSkillLevels(memberId, gameId, request);
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{gameId}/players/ratings")
+    public ResponseEntity<Void> updateRatings(@AuthenticationPrincipal Long memberId,
+                                              @PathVariable Long gameId,
+                                              @Valid @RequestBody UpdatePlayerRatingsRequest request) {
+        gameFacade.updateRatings(memberId, gameId, request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{gameId}/players/ratings")
+    public ListPlayerRatingsResponse listRatings(@AuthenticationPrincipal Long memberId, @PathVariable Long gameId) {
+        return gameFacade.listRatings(memberId, gameId);
     }
 
     @PutMapping("/{gameId}/players/{gamePlayerId}/positions")
